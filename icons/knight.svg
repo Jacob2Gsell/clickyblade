@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="10" fill="#1f232a"/>
+  <!-- sword on the left -->
+  <polygon points="24,76 28,16 32,76" fill="#ddd"/>
+  <rect x="17" y="75" width="22" height="5" rx="2" fill="#a73"/>
+  <rect x="26" y="80" width="4" height="12" fill="#a73"/>
+  <!-- shield on the right -->
+  <path d="M58 28 H86 V56 Q86 78 72 86 Q58 78 58 56 Z" fill="#4af" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="70" y="38" width="4" height="36" fill="#fff"/>
+  <rect x="62" y="50" width="20" height="4" fill="#fff"/>
+</svg>

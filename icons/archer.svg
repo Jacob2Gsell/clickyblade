@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="10" fill="#1f232a"/>
+  <!-- bow: limbs curve forward (towards the target, right), grip in the middle -->
+  <path d="M60 10 Q96 50 60 90" fill="none" stroke="#a73" stroke-width="5" stroke-linecap="round"/>
+  <rect x="73" y="42" width="7" height="16" rx="2" fill="#6b4a1e"/>
+  <!-- drawn string, pulled back to the nock -->
+  <polyline points="60,10 22,50 60,90" fill="none" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- arrow nocked on the string, pointing right -->
+  <rect x="22" y="48.5" width="62" height="3" fill="#ddd"/>
+  <polygon points="96,50 83,43 83,57" fill="#ddd"/>
+  <!-- feathers at the nock end -->
+  <polygon points="22,50 16,43 30,43 34,50 30,57 16,57" fill="#c96"/>
+</svg>
