@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import { minify } from 'html-minifier-terser';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { mangleClasses } from './mangle-classes.js';
 
 const SCRIPT_TAG = '<script type="module" src="src/main.js"></script>';
 
@@ -34,8 +35,12 @@ for (const path of iconPaths) {
   html = html.replaceAll(`src="${path}"`, () => `src="${uri}"`);
 }
 
+// CSS-Klassen kuerzen (Style, class-Attribute und classList-Aufrufe im JS gemeinsam)
+const mangled = mangleClasses({ html, js });
+html = mangled.html;
+
 // Funktion als Ersatz, damit "$" im Code nicht als Pattern interpretiert wird
-html = html.replace(SCRIPT_TAG, () => `<script>${js}</script>`);
+html = html.replace(SCRIPT_TAG, () => `<script>${mangled.js}</script>`);
 
 // HTML und Inline-CSS minifizieren (JS ist bereits von esbuild minifiziert)
 html = await minify(html, {
