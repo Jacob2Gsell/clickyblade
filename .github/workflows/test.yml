@@ -1,0 +1,105 @@
+name: Tests
+
+on:
+  push:
+    # main is tested by release.yml (as a reusable workflow) after every merged PR.
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  # Lets release.yml run the same tests as a reusable workflow, optionally for an exact commit.
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to test; empty means the default ref of the triggering event.
+        type: string
+        default: ''
+
+# A new push cancels the still-running run of the same branch/PR; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Strict mode for every run step: exit on error (-e), unset variables (-u), failing pipes (pipefail).
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+env:
+  CI: true
+  NPM_CONFIG_FUND: false
+  NPM_CONFIG_AUDIT: false
+  NPM_CONFIG_UPDATE_NOTIFIER: false
+
+# Actions are pinned to full commit SHAs (supply-chain safety); update them by hand.
+jobs:
+  unit:
+    name: Unit (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: true
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      # package-lock.json is committed; `npm install` respects it (release.yml uses the stricter `npm ci`).
+      # Install scripts are not needed (esbuild ships prebuilt binaries) and are a supply-chain risk.
+      - run: npm install --ignore-scripts
+
+      # Coverage is informational only (no threshold).
+      - run: node scripts/run-tests.js test --experimental-test-coverage
+
+  e2e:
+    name: E2E (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The e2e suite silently skips when no browser is found, which would make a green run meaningless.
+      - name: Require Chrome
+        run: google-chrome --version
+
+      - run: npm install --ignore-scripts
+
+      - run: npm run test:e2e
+
+  # Single stable check to require in branch protection, regardless of matrix changes.
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [unit, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check all jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = success ] || exit 1
+          done

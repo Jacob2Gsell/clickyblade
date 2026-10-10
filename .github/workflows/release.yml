@@ -1,0 +1,48 @@
+name: Release
+
+# Runs only when a pull request into main has been merged (closed without merging does nothing).
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+env:
+  CI: true
+  NPM_CONFIG_FUND: false
+  NPM_CONFIG_AUDIT: false
+  NPM_CONFIG_UPDATE_NOTIFIER: false
+
+jobs:
+  tests:
+    name: Tests
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+  # Only verifies that the build works after green tests; nothing is uploaded or published yet.
+  build:
+    name: Build
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - run: npm ci --ignore-scripts
+
+      - run: npm run build
