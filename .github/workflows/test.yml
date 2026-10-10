@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # Lets release.yml run the same tests as a reusable workflow.
+  workflow_call:
 
 # A new push cancels the still-running run of the same branch/PR; runs on main are never cancelled.
 concurrency:
