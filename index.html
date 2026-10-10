@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clicky Blade</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+    canvas { display: block; cursor: crosshair; }
+    #slowmo-overlay {
+      position: fixed; inset: 0; pointer-events: none;
+      background: rgba(0, 0, 0, 0.35);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    #slowmo-overlay.active { opacity: 1; }
+    .focus-label {
+      position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+      font: 600 20px system-ui, sans-serif; letter-spacing: 0.35em; text-indent: 0.35em;
+      color: #e8f4ff; text-shadow: 0 0 12px rgba(102, 204, 255, 0.6);
+    }
+    #pause-menu {
+      display: none; position: fixed; inset: 0; z-index: 10;
+      flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: rgba(0, 0, 0, 0.6);
+      font-family: system-ui, sans-serif; color: #fff;
+    }
+    #pause-menu.open { display: flex; }
+    .pause-title { font-size: 48px; font-weight: bold; margin-bottom: 16px; }
+    #pause-menu button {
+      width: 220px; padding: 10px 0;
+      font: 18px system-ui, sans-serif; color: #fff;
+      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px;
+      cursor: pointer;
+    }
+    #pause-menu button:hover { border-color: #6cf; }
+    #main-menu {
+      display: none; position: fixed; inset: 0; z-index: 20;
+      flex-direction: column; align-items: center;
+      padding-top: 8vh; box-sizing: border-box;
+      background: #111; font-family: system-ui, sans-serif; color: #fff;
+    }
+    #main-menu.open { display: flex; }
+    .menu-title {
+      font-size: 72px; font-weight: 800; letter-spacing: 0.15em; text-indent: 0.15em;
+      text-transform: uppercase; color: #e8f4ff;
+      text-shadow: 0 0 24px rgba(102, 204, 255, 0.5);
+    }
+    .menu-center {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6vh; padding-bottom: 12vh;
+    }
+    .char-row { display: flex; gap: 24px; }
+    .char-card {
+      width: 180px; height: 240px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: #1f232a; border: 2px solid #3a404b; border-radius: 6px;
+      font: 18px system-ui, sans-serif; color: #fff; cursor: pointer;
+    }
+    .char-card img { width: 110px; height: 110px; }
+    .char-card:hover { border-color: #6cf; }
+    .char-card:disabled { opacity: 0.4; cursor: default; border-color: #3a404b; }
+    .char-card:disabled .char-icon { font-size: 64px; color: #3a404b; }
+    .char-card.selected { border-color: #6cf; box-shadow: 0 0 16px rgba(102, 204, 255, 0.4); }
+    #btn-continue {
+      width: 260px; padding: 12px 0;
+      font: 600 22px system-ui, sans-serif; letter-spacing: 0.1em; color: #fff;
+      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
+    }
+    #btn-continue:hover { border-color: #6cf; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="slowmo-overlay"><span class="focus-label">FOKUS</span></div>
+  <div id="pause-menu">
+    <div class="pause-title">PAUSED</div>
+    <button id="btn-proceed">Proceed</button>
+    <button id="btn-main-menu">Main menu</button>
+  </div>
+  <div id="main-menu" class="open">
+    <div class="menu-title">Clicky Blade</div>
+    <div class="menu-center">
+      <div class="char-row">
+        <button class="char-card selected" data-char="knight"><img src="icons/knight.svg" alt="">Knight</button>
+        <button class="char-card" data-char="assassin"><img src="icons/assassin.svg" alt="">Assassin</button>
+        <button class="char-card" data-char="archer"><img src="icons/archer.svg" alt="">Archer</button>
+      </div>
+      <button id="btn-continue">Continue</button>
+    </div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

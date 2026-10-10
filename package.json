@@ -1,0 +1,15 @@
+{
+  "name": "clicky-blade",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node --test test/",
+    "test:e2e": "node --test e2e/"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "html-minifier-terser": "^7.2.0",
+    "playwright-core": "^1.64.0"
+  }
+}
