@@ -1,9 +1,9 @@
 name: Release
 
-# Runs only when a pull request into main has been merged (closed without merging does nothing).
+# Runs on every push to main, i.e. after a pull request has been merged. Running on the main ref (not
+# refs/pull/N/merge) is what the github-pages environment's deployment branch rule requires.
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches: [main]
 
 permissions:
@@ -22,10 +22,7 @@ env:
 jobs:
   tests:
     name: Tests
-    if: github.event.pull_request.merged == true
     uses: ./.github/workflows/test.yml
-    with:
-      ref: ${{ github.event.pull_request.merge_commit_sha }}
 
   # Builds after green tests and hands dist/ to the deploy job as a Pages artifact.
   build:
@@ -36,7 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

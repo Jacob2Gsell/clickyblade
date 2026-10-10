@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    # main is tested by release.yml (as a reusable workflow) after every merged PR.
+    # main is tested by release.yml (as a reusable workflow) after every push to main.
     branches-ignore: [main]
   pull_request:
     branches: [main]
