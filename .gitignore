@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# Claude Code (per-user settings; shared .claude/settings.json stays tracked)
+.claude/settings.local.json
+.claude/agents/
+
+# Temporary / backup files
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.eslintcache
+.npm/
+*.tgz
+
+# Lockfile
+package-lock.json
