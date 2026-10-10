@@ -42,6 +42,3 @@ coverage/
 .eslintcache
 .npm/
 *.tgz
-
-# Lockfile
-package-lock.json
