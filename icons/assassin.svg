@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="10" fill="#1f232a"/>
+  <!-- two daggers, one in each hand -->
+  <g transform="rotate(-30 50 62)">
+    <polygon points="47,30 50,12 53,30" fill="#ddd"/>
+    <rect x="47" y="30" width="6" height="30" fill="#ddd"/>
+    <rect x="41" y="60" width="18" height="5" rx="2" fill="#a73"/>
+    <rect x="47" y="65" width="6" height="14" fill="#a73"/>
+  </g>
+  <g transform="rotate(30 50 62)">
+    <polygon points="47,30 50,12 53,30" fill="#ddd"/>
+    <rect x="47" y="30" width="6" height="30" fill="#ddd"/>
+    <rect x="41" y="60" width="18" height="5" rx="2" fill="#a73"/>
+    <rect x="47" y="65" width="6" height="14" fill="#a73"/>
+  </g>
+</svg>
