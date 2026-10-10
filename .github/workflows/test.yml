@@ -15,6 +15,11 @@ concurrency:
 permissions:
   contents: read
 
+defaults:
+  run:
+    # Explicit shell makes GitHub use `bash -eo pipefail` instead of plain `bash -e`.
+    shell: bash
+
 env:
   CI: true
   NPM_CONFIG_FUND: false
