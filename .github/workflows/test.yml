@@ -17,8 +17,8 @@ permissions:
 
 defaults:
   run:
-    # Explicit shell makes GitHub use `bash -eo pipefail` instead of plain `bash -e`.
-    shell: bash
+    # Strict mode for every run step: exit on error (-e), unset variables (-u), failing pipes (pipefail).
+    shell: bash --noprofile --norc -euo pipefail {0}
 
 env:
   CI: true
