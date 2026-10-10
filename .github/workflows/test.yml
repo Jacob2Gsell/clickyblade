@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      # package-lock.json is gitignored, so `npm ci` and the npm cache are not available.
+      # package-lock.json is committed; `npm install` respects it (release.yml uses the stricter `npm ci`).
       # Install scripts are not needed (esbuild ships prebuilt binaries) and are a supply-chain risk.
       - run: npm install --ignore-scripts
 

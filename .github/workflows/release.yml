@@ -23,6 +23,7 @@ jobs:
     name: Tests
     uses: ./.github/workflows/test.yml
 
+  # Only verifies that the build works after green tests; nothing is uploaded or published yet.
   build:
     name: Build
     needs: tests
