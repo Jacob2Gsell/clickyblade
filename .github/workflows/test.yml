@@ -26,7 +26,7 @@ env:
   NPM_CONFIG_AUDIT: false
   NPM_CONFIG_UPDATE_NOTIFIER: false
 
-# Actions are pinned to full commit SHAs (supply-chain safety); Dependabot keeps them current.
+# Actions are pinned to full commit SHAs (supply-chain safety); update them by hand.
 jobs:
   unit:
     name: Unit (Node ${{ matrix.node }})
