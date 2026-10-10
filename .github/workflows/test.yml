@@ -7,41 +7,102 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A new push to the same branch/PR cancels the run that is still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
+env:
+  CI: true
+  NPM_CONFIG_FUND: false
+  NPM_CONFIG_AUDIT: false
+  NPM_CONFIG_UPDATE_NOTIFIER: false
+
+# Actions are pinned to full commit SHAs (supply-chain safety); Dependabot keeps them current.
 jobs:
   unit:
+    name: Unit (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
 
       # package-lock.json is gitignored, so `npm ci` and the npm cache are not available.
       - run: npm install
 
-      - run: npm test
+      # Coverage is informational only (no threshold).
+      - run: node --test --experimental-test-coverage test/
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - run: npm install
+
+      - run: npm run build
+
+      - name: Size summary
+        run: |
+          size=$(stat -c %s dist/index.html)
+          echo "dist/index.html: $((size / 1024)) KiB" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
 
   e2e:
+    name: E2E (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
+
+      # The e2e suite silently skips when no browser is found, which would make a green run meaningless.
+      - name: Require Chrome
+        run: google-chrome --version
 
       - run: npm install
 
       - run: npm run test:e2e
+
+  # Single stable check to require in branch protection, regardless of matrix changes.
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [unit, build, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          echo '${{ toJSON(needs) }}'
+          [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "false" ]
