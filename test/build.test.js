@@ -81,6 +81,33 @@ test('build: embedded icons are visually the same shapes as the originals', () =
   }
 });
 
+test('build: CSS class names are shortened and the original names are gone', () => {
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  const classes = new Set([...css.matchAll(/\.([A-Za-z_][\w-]*)(?=[\s.:{,>+~[]|$)/g)].map((m) => m[1]));
+  assert.ok(classes.size >= 5, `only found ${[...classes]}`);
+  for (const c of classes) assert.ok(c.length <= 2, `class "${c}" not shortened`);
+  for (const original of ['char-card', 'char-row', 'menu-title', 'menu-center', 'pause-title', 'focus-label', 'selected']) {
+    assert.ok(!html.includes(original), `"${original}" still in the build`);
+  }
+});
+
+test('build: every class the script toggles has a CSS rule, and every class in the markup is styled', () => {
+  const dom = createFakeDom();
+  loadBundle(dom);
+  dom.listeners['btn-continue'].click();
+  dom.listeners['btn-main-menu'].click();
+  dom.listeners[dom.cards[1].id].click();
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  const styled = new Set([...css.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]));
+  assert.ok(dom.classesUsed.size >= 2, 'script did not touch any class');
+  for (const c of dom.classesUsed) assert.ok(styled.has(c), `script uses class "${c}" which has no CSS rule`);
+  const body = html.slice(html.indexOf('</style>'));
+  for (const [, value] of body.matchAll(/\sclass="([^"]+)"/g)) {
+    for (const c of value.split(/\s+/)) assert.ok(styled.has(c), `markup uses class "${c}" which has no CSS rule`);
+  }
+  assert.ok(!/:disabled/.test(css), 'dead :disabled rules are back');
+});
+
 test('build: the inline script is valid classic JavaScript (no leftover import/export)', () => {
   assert.doesNotThrow(() => new vm.Script(inlineScript()));
 });
@@ -133,6 +160,7 @@ test('build: fails loudly when the script tag in index.html is missing', () => {
 function createFakeDom() {
   const listeners = {};      // element id (or 'window') -> { event: handler }
   const draws = { calls: 0 };
+  const dom = { classesUsed: new Set() };
   const ctx = new Proxy({}, {
     get: (_t, prop) => (typeof prop === 'string' ? () => { draws.calls++; } : undefined),
     set: () => true,
@@ -141,7 +169,9 @@ function createFakeDom() {
     id,
     width: 0, height: 0,
     dataset: { char: id },
-    classList: { add() {}, remove() {}, toggle() {} },
+    classList: {
+      add(c) { dom.classesUsed.add(c); }, remove(c) { dom.classesUsed.add(c); }, toggle(c) { dom.classesUsed.add(c); },
+    },
     addEventListener(ev, fn) { (listeners[id] ||= {})[ev] = fn; },
     getContext: () => ctx,
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
@@ -162,11 +192,11 @@ function createFakeDom() {
     requestAnimationFrame: (fn) => { raf = fn; },
     Math, console,
   };
-  return {
+  return Object.assign(dom, {
     sandbox, listeners, draws, cards, getEl,
     frame(now) { const f = raf; raf = null; f(now); },
     hasFrame: () => raf !== null,
-  };
+  });
 }
 
 function loadBundle(dom) {
