@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node --test test/",
-    "test:e2e": "node --test e2e/"
+    "test": "node scripts/run-tests.js test",
+    "test:e2e": "node scripts/run-tests.js e2e"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
