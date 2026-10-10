@@ -49,7 +49,7 @@ jobs:
       - run: npm install --ignore-scripts
 
       # Coverage is informational only (no threshold).
-      - run: node --test --experimental-test-coverage test/
+      - run: node scripts/run-tests.js test --experimental-test-coverage
 
   e2e:
     name: E2E (Node ${{ matrix.node }})
