@@ -5,8 +5,13 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-  # Lets release.yml run the same tests as a reusable workflow.
+  # Lets release.yml run the same tests as a reusable workflow, optionally for an exact commit.
   workflow_call:
+    inputs:
+      ref:
+        description: Commit to test; empty means the default ref of the triggering event.
+        type: string
+        default: ''
 
 # A new push cancels the still-running run of the same branch/PR; runs on main are never cancelled.
 concurrency:
@@ -40,6 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -64,6 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
