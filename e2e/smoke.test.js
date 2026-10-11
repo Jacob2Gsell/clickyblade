@@ -138,3 +138,17 @@ test('e2e: standing still, the player eventually dies and the game keeps running
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
+
+test('e2e: ASCII render mode toggles with T and draws text instead of shapes', async (t) => {
+  if (!(await openGame(t))) return;
+  await page.click('#btn-continue');
+  await page.waitForTimeout(500);
+  const before = await paintedPixels();
+  await page.keyboard.press('KeyT');
+  await page.waitForTimeout(500);
+  const after = await paintedPixels();
+  await page.keyboard.press('KeyT');
+  await page.close();
+  assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
+  assert.deepEqual(errors, []);
+});

@@ -1,6 +1,7 @@
 import { createInput } from './input.js';
 import { createPlayer, updatePlayer, drawPlayer, isPlayerVulnerable, hurtPlayer, isShielded, useShield } from './player.js';
 import { createEnemy, createDasher, hitEnemy, shoveEnemy, updateEnemies, drawEnemy } from './enemies/enemy.js';
+import { createAsciiRenderer } from './ascii.js';
 import { TRAP_CHARGES } from './playercharacters/archer.js';
 import {
   createWaves, advanceWaves, spawnPoint, isDasherSpawn,
@@ -11,6 +12,17 @@ import { createLexicon, unlockSpells } from './lexicon.js';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const input = createInput(canvas);
+// ASCII mode draws the scene here first, then converts it to characters on the main canvas.
+const sceneCanvas = document.createElement('canvas');
+const sceneCtx = sceneCanvas.getContext('2d');
+const drawAscii = createAsciiRenderer();
+let asciiMode = false;
+const renderToggles = ['btn-render-main', 'btn-render-pause'].map((id) => document.getElementById(id));
+function setAsciiMode(on) {
+  asciiMode = on;
+  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'}`;
+}
+for (const b of renderToggles) b.addEventListener('click', () => setAsciiMode(!asciiMode));
 
 const overlay = document.getElementById('slowmo-overlay');
 const lexiconEl = document.getElementById('lexicon');
@@ -60,6 +72,8 @@ window.addEventListener('keydown', (e) => {
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  sceneCanvas.width = canvas.width;
+  sceneCanvas.height = canvas.height;
   bounds = {
     x: ARENA_MARGIN, y: ARENA_MARGIN,
     w: canvas.width - ARENA_MARGIN * 2, h: canvas.height - ARENA_MARGIN * 2,
@@ -145,7 +159,7 @@ function update(dt) {
   fx.shake = Math.max(0, fx.shake - 40 * dt);
 }
 
-function drawFloor() {
+function drawFloor(ctx, boldBorder) {
   ctx.fillStyle = '#16181d';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = '#1f232a';
@@ -160,8 +174,8 @@ function drawFloor() {
     ctx.lineTo(bounds.x + bounds.w, y + 0.5);
   }
   ctx.stroke();
-  ctx.strokeStyle = '#3a404b';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = boldBorder ? '#9aa4b5' : '#3a404b'; // thin lines vanish when shrunk to characters
+  ctx.lineWidth = boldBorder ? 8 : 2;
   ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
 }
 
@@ -201,12 +215,14 @@ function drawHud() {
 }
 
 function render() {
-  ctx.save();
-  if (fx.shake > 0 && !paused) ctx.translate((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake);
-  drawFloor();
-  for (const e of enemies) drawEnemy(ctx, e);
-  drawPlayer(ctx, player);
-  ctx.restore();
+  const g = asciiMode ? sceneCtx : ctx;
+  g.save();
+  if (fx.shake > 0 && !paused) g.translate((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake);
+  drawFloor(g, asciiMode);
+  for (const e of enemies) drawEnemy(g, e);
+  drawPlayer(g, player);
+  g.restore();
+  if (asciiMode) drawAscii(sceneCanvas, ctx);
 
   drawHud();
 
@@ -230,6 +246,7 @@ function frame(now) {
   last = now;
   while (acc >= STEP) {
     if (input.wasPressed('Escape') && !gameOver && !inMenu) paused = !paused;
+    if (input.wasPressed('KeyT')) setAsciiMode(!asciiMode);
     if (!paused && !inMenu) {
       update(advanceTime(fx, slowmo, STEP));
     }
