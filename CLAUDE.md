@@ -15,3 +15,11 @@
 ### Allgemein
 
 - Pushe auch auf andere Branches nur nach ausdrücklichem Ja des Nutzers.
+
+## Feature-Workflow
+
+Wenn der Nutzer ein neues Feature bespricht (z. B. „ich will, dass …“), gilt folgende Reihenfolge:
+
+1. **Erst besprechen:** Kläre mit dem Nutzer alle offenen Punkte, bevor du Code schreibst. Keine Annahmen stillschweigend umsetzen.
+2. **Dann umsetzen:** Sobald alles geklärt ist, lege einen Feature-Branch an (z. B. `feature/...`) und implementiere das Feature dort.
+3. **Nicht pushen:** Pushe den Branch nicht. Ein Push erfolgt nur nach ausdrücklichem Ja des Nutzers (siehe „Allgemein“). Ein Pull Request entsteht ebenfalls erst danach.
