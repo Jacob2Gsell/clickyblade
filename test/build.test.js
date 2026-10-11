@@ -173,6 +173,7 @@ function createFakeDom() {
       add(c) { dom.classesUsed.add(c); }, remove(c) { dom.classesUsed.add(c); }, toggle(c) { dom.classesUsed.add(c); },
     },
     addEventListener(ev, fn) { (listeners[id] ||= {})[ev] = fn; },
+    append() {}, replaceChildren() {}, textContent: '',
     getContext: () => ctx,
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
   });
@@ -183,7 +184,7 @@ function createFakeDom() {
 
   let raf = null;
   const sandbox = {
-    document: { getElementById: getEl, querySelectorAll: () => cards },
+    document: { getElementById: getEl, createElement: (tag) => makeEl(tag), querySelectorAll: () => cards },
     window: {
       innerWidth: 1000, innerHeight: 700,
       addEventListener(ev, fn) { (listeners.window ||= {})[ev] = fn; },

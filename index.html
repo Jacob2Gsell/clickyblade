@@ -20,6 +20,23 @@
       font: 600 20px system-ui, sans-serif; letter-spacing: 0.35em; text-indent: 0.35em;
       color: #e8f4ff; text-shadow: 0 0 12px rgba(102, 204, 255, 0.6);
     }
+    #lexicon {
+      position: fixed; left: 24px; top: 80px; bottom: 24px; width: 220px; z-index: 5;
+      display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+      pointer-events: none; opacity: 0; transition: opacity 0.25s;
+      font-family: system-ui, sans-serif; color: #fff;
+    }
+    #lexicon.active { opacity: 1; }
+    .lex-title {
+      font: 600 14px system-ui, sans-serif; letter-spacing: 0.3em; text-transform: uppercase;
+      color: #e8f4ff; text-shadow: 0 0 12px rgba(102, 204, 255, 0.6);
+    }
+    .spell {
+      padding: 8px 10px; flex: none;
+      background: #1f232a; border: 2px solid #3a404b; border-radius: 6px;
+    }
+    .spell-name { font-weight: 600; font-size: 15px; color: #6cf; margin-bottom: 4px; }
+    .spell-effect { font-size: 13px; color: #ccc; line-height: 1.35; }
     #pause-menu {
       display: none; position: fixed; inset: 0; z-index: 10;
       flex-direction: column; align-items: center; justify-content: center; gap: 12px;
@@ -72,6 +89,7 @@
 <body>
   <canvas id="game"></canvas>
   <div id="slowmo-overlay"><span class="focus-label">FOKUS</span></div>
+  <div id="lexicon"></div>
   <div id="pause-menu">
     <div class="pause-title">PAUSED</div>
     <button id="btn-proceed">Proceed</button>
