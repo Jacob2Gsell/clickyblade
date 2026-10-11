@@ -4,7 +4,7 @@ import { shoveEnemy } from './enemies/enemy.js';
 // Game rules that don't touch the DOM or canvas, so they can be tested on their own.
 
 // Time scale: slow motion eases towards SLOWMO_SCALE; hitstop drops the game to a crawl for a moment.
-export const SLOWMO_SCALE = 0.25;
+export const SLOWMO_SCALE = 0.125;
 export const SLOWMO_EASE = 12; // how quickly timeScale approaches its target (per second)
 export const HITSTOP_SCALE = 0.05;
 export const HITSTOP_HIT = 0.1;   // seconds, sword connects

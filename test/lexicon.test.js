@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLexicon, unlockSpells, SPELLS, SPELLS_PER_WAVE } from '../src/lexicon.js';
+import { createLexicon, unlockSpells, findKnownSpell, matchedPrefixLength, SPELLS, SPELLS_PER_WAVE } from '../src/lexicon.js';
 
 const pool = [1, 2, 3, 4, 5].map((n) => ({ id: `s${n}`, name: `Spell ${n}`, effects: ['x'] }));
 
@@ -49,6 +49,40 @@ test('spells.json: valid entries with unique ids', () => {
     assert.ok(Array.isArray(s.effects) && s.effects.length > 0, `${s.id} needs effects`);
     assert.ok(s.effects.every((e) => typeof e === 'string' && e.length > 0));
   }
+});
+
+test('findKnownSpell: matches a known name ignoring case and extra spaces', () => {
+  const lex = [{ id: 'a', name: 'Ember Lash', effects: ['x'] }];
+  assert.equal(findKnownSpell(lex, 'Ember Lash').id, 'a');
+  assert.equal(findKnownSpell(lex, '  ember   lash ').id, 'a');
+});
+
+test('findKnownSpell: partial names and unknown spells do not match', () => {
+  const lex = [{ id: 'a', name: 'Ember Lash', effects: ['x'] }];
+  assert.equal(findKnownSpell(lex, 'Ember'), undefined);
+  assert.equal(findKnownSpell(lex, ''), undefined);
+  assert.equal(findKnownSpell(lex, 'Frost Step'), undefined);
+});
+
+test('matchedPrefixLength: counts the letters the typed text matches from the start', () => {
+  const spell = { id: 'a', name: 'Ember Lash', effects: ['x'] };
+  assert.equal(matchedPrefixLength(spell, 'EMB'), 3);
+  assert.equal(matchedPrefixLength(spell, 'ember lash'), 10);
+  assert.equal(matchedPrefixLength(spell, 'EMBER L'), 7);
+});
+
+test('matchedPrefixLength: no match when the text is not the start of the name, or empty', () => {
+  const spell = { id: 'a', name: 'Ember Lash', effects: ['x'] };
+  assert.equal(matchedPrefixLength(spell, 'LASH'), 0);
+  assert.equal(matchedPrefixLength(spell, 'EMBERX'), 0);
+  assert.equal(matchedPrefixLength(spell, ''), 0);
+});
+
+test('findKnownSpell: a spell that is not in the lexicon yet cannot be cast', () => {
+  const lex = [];
+  unlockSpells(lex, pool, 1, () => 0);
+  assert.equal(findKnownSpell(lex, 'Spell 5'), undefined);
+  assert.equal(findKnownSpell(lex, 'Spell 1').id, 's1');
 });
 
 test('spells.json: texts are plain text (no markup characters, sane length)', () => {
