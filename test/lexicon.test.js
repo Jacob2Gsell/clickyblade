@@ -50,3 +50,12 @@ test('spells.json: valid entries with unique ids', () => {
     assert.ok(s.effects.every((e) => typeof e === 'string' && e.length > 0));
   }
 });
+
+test('spells.json: texts are plain text (no markup characters, sane length)', () => {
+  for (const s of SPELLS) {
+    for (const text of [s.name, ...s.effects]) {
+      assert.ok(!/[<>]/.test(text), `${s.id}: "${text}" contains markup characters`);
+      assert.ok(text.length <= 60, `${s.id}: "${text}" is too long for the panel`);
+    }
+  }
+});

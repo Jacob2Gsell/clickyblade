@@ -252,3 +252,25 @@ test('build: arrow keys and wheel scroll the lexicon only while focus mode is ac
   win.wheel({ deltaY: 100 });
   assert.equal(lexicon.scrollTop, 160);
 });
+
+test('build: "</script" and "<!--" in the game data can not break out of the inline script', () => {
+  const dir = makeProjectCopy();
+  try {
+    const file = join(dir, 'src', 'data', 'spells.json');
+    const spells = JSON.parse(readFileSync(file, 'utf8'));
+    spells[0].name = 'Evil </script><script>alert(1)</script> <!-- x';
+    spells[0].effects = ['</SCRIPT> and <!-- again'];
+    writeFileSync(file, JSON.stringify(spells));
+    const res = runBuild(dir);
+    assert.equal(res.status, 0, res.stderr);
+    const out = readFileSync(join(dir, 'dist', 'index.html'), 'utf8');
+    // A literal "<script" inside the script is harmless as long as "<!--" (double-escaped state) can't occur.
+    assert.equal((out.match(/<\/script/gi) || []).length, 1, 'exactly one script close tag');
+    assert.ok(!out.includes('<!--'), 'no HTML comment opener in the output');
+    const js = out.match(/<script>([\s\S]*)<\/script>/)[1];
+    assert.doesNotThrow(() => new vm.Script(js));
+    assert.ok(js.includes('Evil <\\/script>'), 'the text itself is kept (escaped), not dropped');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
