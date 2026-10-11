@@ -21,7 +21,7 @@ let asciiMode = false;
 const renderToggles = ['btn-render-main', 'btn-render-pause'].map((id) => document.getElementById(id));
 function setAsciiMode(on) {
   asciiMode = on;
-  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'}`;
+  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'} [R]`;
 }
 for (const b of renderToggles) b.addEventListener('click', () => setAsciiMode(!asciiMode));
 
@@ -49,6 +49,18 @@ for (const card of charCards) {
     character = card.dataset.char;
     charCards.forEach((c) => c.classList.toggle('selected', c === card));
   });
+}
+
+// Menu buttons carry a data-key (e.g. KeyC). Pressing that key clicks the button while its menu is open.
+const menuHotkeys = [
+  [mainMenu, [...charCards, document.getElementById('btn-continue'), document.getElementById('btn-render-main')]],
+  [pauseMenu, [document.getElementById('btn-proceed'), document.getElementById('btn-main-menu'), document.getElementById('btn-render-pause')]],
+];
+function pressMenuHotkeys() {
+  for (const [menu, buttons] of menuHotkeys) {
+    if (!menu.classList.contains('open')) continue;
+    for (const b of buttons) if (input.wasPressed(b.dataset.key)) b.click();
+  }
 }
 
 const STEP = 1 / 120;
@@ -294,6 +306,7 @@ function frame(now) {
   last = now;
   while (acc >= STEP) {
     if (input.wasPressed('Escape') && !gameOver && !inMenu) paused = !paused;
+    pressMenuHotkeys();
     if (input.wasPressed('KeyT')) setAsciiMode(!asciiMode);
     if (!paused && !inMenu) {
       update(advanceTime(fx, slowmo, STEP));

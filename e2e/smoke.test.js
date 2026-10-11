@@ -146,15 +146,15 @@ test('e2e: ASCII render mode toggles with T and draws text instead of shapes', a
     await page.click('#btn-continue');
     await page.waitForTimeout(500);
     const before = await paintedPixels();
-    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics'); // hidden by now, label still readable
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics [R]'); // hidden by now, label still readable
     await page.keyboard.press('KeyT');
     await page.waitForTimeout(500);
     const after = await paintedPixels();
-    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII [R]');
     assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
     await page.keyboard.press('KeyT');
     await page.waitForTimeout(100); // the toggle is applied on the next game step
-    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics [R]');
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
@@ -168,11 +168,37 @@ test('e2e: the render button in the pause menu switches the mode', async (t) => 
     await page.waitForTimeout(50);
     assert.equal(await isOpen('#pause-menu'), true);
     await page.click('#btn-render-pause');
-    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII');
-    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII'); // both toggles stay in sync
+    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII [R]');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII [R]'); // both toggles stay in sync
     await page.click('#btn-proceed');
     await page.waitForTimeout(500);
     assert.ok(await paintedPixels() > 0, 'canvas looks empty in ASCII mode');
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+});
+
+test('e2e: menu buttons work with their keys, but only while their menu is open', async (t) => {
+  if (!(await openGame(t))) return;
+  try {
+    await page.keyboard.press('Digit2');
+    assert.equal(await isSelected('button[data-char="assassin"]'), true);
+    await page.keyboard.press('KeyC');
+    await page.waitForTimeout(100);
+    assert.equal(await isOpen('#main-menu'), false);
+
+    await page.keyboard.press('KeyM'); // main menu is not reachable in game, so the key does nothing
+    await page.waitForTimeout(100);
+    assert.equal(await isOpen('#main-menu'), false);
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(50);
+    assert.equal(await isOpen('#pause-menu'), true);
+    await page.keyboard.press('KeyR');
+    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII [R]');
+    await page.keyboard.press('KeyM');
+    await page.waitForTimeout(50);
+    assert.equal(await isOpen('#pause-menu'), false);
+    assert.equal(await isOpen('#main-menu'), true);
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });

@@ -110,20 +110,20 @@
   <input id="spell-input" type="text" placeholder="Zauberspruch" autocomplete="off" spellcheck="false" maxlength="40">
   <div id="pause-menu">
     <div class="pause-title">PAUSED</div>
-    <button id="btn-proceed">Proceed</button>
-    <button id="btn-main-menu">Main menu</button>
-    <button id="btn-render-pause">Render: Graphics</button>
+    <button id="btn-proceed" data-key="KeyP">Proceed [P]</button>
+    <button id="btn-main-menu" data-key="KeyM">Main menu [M]</button>
+    <button id="btn-render-pause" data-key="KeyR">Render: Graphics [R]</button>
   </div>
   <div id="main-menu" class="open">
     <div class="menu-title">Clicky Blade</div>
     <div class="menu-center">
       <div class="char-row">
-        <button class="char-card selected" data-char="knight"><img src="icons/knight.svg" alt="">Knight</button>
-        <button class="char-card" data-char="assassin"><img src="icons/assassin.svg" alt="">Assassin</button>
-        <button class="char-card" data-char="archer"><img src="icons/archer.svg" alt="">Archer</button>
+        <button class="char-card selected" data-char="knight" data-key="Digit1"><img src="icons/knight.svg" alt="">Knight [1]</button>
+        <button class="char-card" data-char="assassin" data-key="Digit2"><img src="icons/assassin.svg" alt="">Assassin [2]</button>
+        <button class="char-card" data-char="archer" data-key="Digit3"><img src="icons/archer.svg" alt="">Archer [3]</button>
       </div>
-      <button id="btn-continue">Continue</button>
-      <button id="btn-render-main">Render: Graphics</button>
+      <button id="btn-continue" data-key="KeyC">Continue [C]</button>
+      <button id="btn-render-main" data-key="KeyR">Render: Graphics [R]</button>
     </div>
   </div>
   <script type="module" src="src/main.js"></script>
