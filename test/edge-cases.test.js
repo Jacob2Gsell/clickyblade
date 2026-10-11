@@ -6,10 +6,9 @@ import { createEnemy, createDasher, hitEnemy, shoveEnemy, updateEnemies } from '
 
 const BOUNDS = { x: 0, y: 0, w: 1000, h: 1000 };
 const noHit = () => {};
-const input = ({ down = [], pressed = [], mouse = {} } = {}) => ({
-  mouse: { x: 500, y: 500, down: false, rightDown: false, clicked: false, rightClicked: false, ...mouse },
+const input = ({ down = [], pressed = [] } = {}) => ({
   isDown: (c) => down.includes(c),
-  wasPressed: (c) => pressed.includes(c),
+    wasPressed: (c) => pressed.includes(c),
 });
 const enemy = (over = {}) => ({
   x: 500, y: 500, radius: 14, speed: 100, hp: 2, maxHp: 2,
@@ -82,9 +81,9 @@ test('player: a huge time step still keeps the player inside the arena', () => {
   assert.equal(p.y, BOUNDS.y + BOUNDS.h - p.radius);
 });
 
-test('player: the mouse exactly on the player keeps the aim finite', () => {
+test('player: an enemy exactly on the player keeps the aim finite', () => {
   const p = createPlayer(500, 500, 'knight');
-  updatePlayer(p, input({ mouse: { x: 500, y: 500 } }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, input(), 0.01, BOUNDS, [enemy()], noHit);
   assert.ok(Number.isFinite(p.aim));
 });
 

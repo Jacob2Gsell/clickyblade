@@ -1,6 +1,7 @@
 import { normalize } from '../math.js';
+import { ATTACK_KEY, SECONDARY_KEY } from '../shared.js';
 
-// Archer: a bow (hold left click to charge, release to shoot) and up to three traps (right click).
+// Archer: a bow (hold the attack key to charge, release to shoot) and up to three traps (secondary key).
 
 const BASE_DAMAGE = 1;                // one plain shot; the knight's and assassin's hits also do 1
 const PERFECT_MULT = 1.5;             // damage multiplier for a release while the perfect window is open
@@ -53,22 +54,22 @@ export function perfectWindowOpen(p) {
 
 function updateArcher(p, input, dt, enemies, onHit, view) {
   // Bow: pressing starts the charge, releasing shoots whatever level was reached.
-  if (input.mouse.clicked && p.charge === null) {
+  if (input.wasPressed(ATTACK_KEY) && p.charge === null) {
     p.charge = 0;
     p.stage = 0;
     p.perfectLeft = 0;
   }
   if (p.charge !== null) {
     advanceCharge(p, dt);
-    if (!input.mouse.down) {
+    if (!input.isDown(ATTACK_KEY)) {
       shoot(p);
       p.charge = null;
     }
   }
 
-  // Traps: right click places one at the archer's feet if one is charged and the cooldown is over.
+  // Traps: the secondary key places one at the archer's feet if one is charged and the cooldown is over.
   p.trapCooldown = Math.max(0, p.trapCooldown - dt);
-  if (input.mouse.rightClicked && p.trapCharges > 0 && p.trapCooldown === 0) {
+  if (input.wasPressed(SECONDARY_KEY) && p.trapCharges > 0 && p.trapCooldown === 0) {
     p.traps.push({ x: p.x, y: p.y, blast: p.radius * TRAP_RADIUS_FACTOR });
     p.trapCharges--;
     p.trapCooldown = TRAP_COOLDOWN;

@@ -51,39 +51,11 @@ test('Space keydown calls preventDefault, other keys do not', () => {
   assert.equal(prevented, 1);
 });
 
-test('mousemove is converted to canvas-local coordinates', () => {
-  const input = createInput(canvas);
-  canvas.fire('mousemove', { clientX: 110, clientY: 70 });
-  assert.equal(input.mouse.x, 100);
-  assert.equal(input.mouse.y, 50);
-});
-
-test('left mouse button sets down and clicked; clicked clears on endFrame', () => {
-  const input = createInput(canvas);
-  canvas.fire('mousedown', { button: 0 });
-  assert.equal(input.mouse.down, true);
-  assert.equal(input.mouse.clicked, true);
-  input.endFrame();
-  assert.equal(input.mouse.clicked, false);
-  assert.equal(input.mouse.down, true);
-  win.fire('mouseup', { button: 0 });
-  assert.equal(input.mouse.down, false);
-});
-
-test('other mouse buttons are ignored', () => {
-  const input = createInput(canvas);
-  canvas.fire('mousedown', { button: 2 });
-  assert.equal(input.mouse.down, false);
-  assert.equal(input.mouse.clicked, false);
-});
-
-test('window blur releases all keys and the mouse', () => {
+test('window blur releases all keys', () => {
   const input = createInput(canvas);
   win.fire('keydown', key('KeyD'));
-  canvas.fire('mousedown', { button: 0 });
   win.fire('blur');
   assert.equal(input.isDown('KeyD'), false);
-  assert.equal(input.mouse.down, false);
 });
 
 test('letters typed into a text field are not game input, but keyup still releases them', () => {

@@ -4,9 +4,8 @@ import { createPlayer, updatePlayer, isPlayerVulnerable, hurtPlayer } from '../s
 
 const BOUNDS = { x: 0, y: 0, w: 1000, h: 1000 };
 
-function makeInput({ down = [], pressed = [], mouse = {} } = {}) {
+function makeInput({ down = [], pressed = [] } = {}) {
   return {
-    mouse: { x: 0, y: 0, down: false, clicked: false, ...mouse },
     isDown: (c) => down.includes(c),
     wasPressed: (c) => pressed.includes(c),
   };
@@ -26,15 +25,51 @@ test('createPlayer: initial state', () => {
   assert.deepEqual(p.trail, []);
 });
 
-test('aim points towards the mouse', () => {
+test('aim points at the nearest enemy within 3 x the player radius', () => {
   const p = createPlayer(100, 100);
-  updatePlayer(p, makeInput({ mouse: { x: 100, y: 200 } }), 0.01, BOUNDS, [], noHit);
+  const far = enemyAt(100, 100 + 40);   // 40 away, in range
+  const near = enemyAt(100 - 20, 100);  // 20 away, nearest
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [far, near], noHit);
+  assert.ok(Math.abs(p.aim - Math.PI) < 1e-9);
+});
+
+test('aim turns instantly to a new target', () => {
+  const p = createPlayer(100, 100);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(100, 130)], noHit);
   assert.ok(Math.abs(p.aim - Math.PI / 2) < 1e-9);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(130, 100)], noHit);
+  assert.ok(Math.abs(p.aim) < 1e-9);
+});
+
+test('enemies outside 3 x the player radius do not steer the aim', () => {
+  const p = createPlayer(100, 100);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(100, 100 + 3 * 16 + 5)], noHit);
+  assert.equal(p.aim, 0); // still facing right, the start direction
+});
+
+test('dead enemies do not steer the aim', () => {
+  const p = createPlayer(100, 100);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(100, 130, { dead: true })], noHit);
+  assert.equal(p.aim, 0);
+});
+
+test('without an enemy in range the player keeps facing its last walking direction', () => {
+  const p = createPlayer(500, 500);
+  updatePlayer(p, makeInput({ down: ['KeyS'] }), 0.01, BOUNDS, [], noHit);
+  assert.ok(Math.abs(p.aim - Math.PI / 2) < 1e-9);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [], noHit); // standing still
+  assert.ok(Math.abs(p.aim - Math.PI / 2) < 1e-9);
+});
+
+test('walking steers the facing, so the aim follows movement when no enemy is near', () => {
+  const p = createPlayer(500, 500);
+  updatePlayer(p, makeInput({ down: ['KeyA'] }), 0.01, BOUNDS, [], noHit);
+  assert.ok(Math.abs(p.aim - Math.PI) < 1e-9);
 });
 
 test('WASD moves the player at base speed', () => {
   const p = createPlayer(500, 500);
-  updatePlayer(p, makeInput({ down: ['KeyD'], mouse: { x: 500, y: 500 } }), 0.1, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ down: ['KeyD'] }), 0.1, BOUNDS, [], noHit);
   assert.ok(Math.abs(p.x - 522) < 1e-9);
   assert.equal(p.y, 500);
   updatePlayer(p, makeInput({ down: ['KeyW'] }), 0.1, BOUNDS, [], noHit);
@@ -77,7 +112,7 @@ test('Space starts a dash in the movement direction and sets cooldown', () => {
 
 test('dash without movement keys goes towards the aim', () => {
   const p = createPlayer(500, 500);
-  updatePlayer(p, makeInput({ pressed: ['Space'], mouse: { x: 500, y: 600 } }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['Space'] }), 0.01, BOUNDS, [enemyAt(500, 540)], noHit);
   assert.ok(Math.abs(p.dash.dx) < 1e-9);
   assert.ok(Math.abs(p.dash.dy - 1) < 1e-9);
 });
@@ -108,16 +143,16 @@ test('dash cooldown ticks down to zero and allows dashing again', () => {
   assert.ok(p.dash);
 });
 
-test('mouse down starts a swing and sets the swing cooldown', () => {
+test('attack key starts a swing and sets the swing cooldown', () => {
   const p = createPlayer(500, 500);
-  updatePlayer(p, makeInput({ mouse: { x: 600, y: 500, clicked: true } }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.ok(p.swing);
   assert.ok(p.swingCooldown > 0.3);
 });
 
 test('swing ends after its duration', () => {
   const p = createPlayer(500, 500);
-  const inp = makeInput({ mouse: { x: 600, y: 500, clicked: true } });
+  const inp = makeInput({ pressed: ['KeyJ'] });
   updatePlayer(p, inp, 0.1, BOUNDS, [], noHit);
   assert.ok(p.swing);
   updatePlayer(p, inp, 0.1, BOUNDS, [], noHit);
@@ -128,7 +163,7 @@ test('swing hits an enemy in front once, with knockback away from the player', (
   const p = createPlayer(500, 500);
   const e = enemyAt(560, 500);
   const hits = [];
-  const inp = makeInput({ mouse: { x: 700, y: 500, clicked: true } });
+  const inp = makeInput({ pressed: ['KeyJ'] });
   updatePlayer(p, inp, 0.01, BOUNDS, [e], (...a) => hits.push(a));
   updatePlayer(p, inp, 0.01, BOUNDS, [e], (...a) => hits.push(a));
   assert.equal(hits.length, 1);
@@ -142,41 +177,41 @@ test('swing hits an enemy in front once, with knockback away from the player', (
 test('swing misses enemies behind the player', () => {
   const p = createPlayer(500, 500);
   const e = enemyAt(440, 500);
-  updatePlayer(p, makeInput({ mouse: { x: 700, y: 500, clicked: true } }), 0.01, BOUNDS, [e], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [e], noHit);
 });
 
 test('swing misses enemies out of reach', () => {
   const p = createPlayer(500, 500);
   const e = enemyAt(700, 500);
-  updatePlayer(p, makeInput({ mouse: { x: 900, y: 500, clicked: true } }), 0.01, BOUNDS, [e], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [e], noHit);
 });
 
 test('swing hits enemies touching the player even outside the arc', () => {
   const p = createPlayer(500, 500);
   const e = enemyAt(480, 500); // behind, but overlapping the body
   let hit = 0;
-  updatePlayer(p, makeInput({ mouse: { x: 700, y: 500, clicked: true } }), 0.01, BOUNDS, [e], () => hit++);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [e], () => hit++);
   assert.equal(hit, 1);
 });
 
 test('swing ignores dead enemies', () => {
   const p = createPlayer(500, 500);
   const e = enemyAt(560, 500, { dead: true });
-  updatePlayer(p, makeInput({ mouse: { x: 700, y: 500, clicked: true } }), 0.01, BOUNDS, [e], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [e], noHit);
 });
 
 test('swing can hit several enemies in one swing', () => {
   const p = createPlayer(500, 500);
   const es = [enemyAt(560, 500), enemyAt(550, 520), enemyAt(550, 480)];
   let hit = 0;
-  updatePlayer(p, makeInput({ mouse: { x: 700, y: 500, clicked: true } }), 0.01, BOUNDS, es, () => hit++);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, es, () => hit++);
   assert.equal(hit, 3);
 });
 
 test('no new swing while swing cooldown is active', () => {
   const p = createPlayer(500, 500);
   p.swingCooldown = 0.3;
-  updatePlayer(p, makeInput({ mouse: { x: 700, y: 500, clicked: true } }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.equal(p.swing, null);
 });
 

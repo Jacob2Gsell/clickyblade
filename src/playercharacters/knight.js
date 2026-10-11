@@ -1,5 +1,5 @@
 import { angleDiff, normalize } from '../math.js';
-import { KNOCKBACK, drawBlade } from '../shared.js';
+import { KNOCKBACK, drawBlade, ATTACK_KEY, SECONDARY_KEY } from '../shared.js';
 
 // Knight: full-size sword (left hand) and a shield (right hand).
 const SWING_ARC = (120 * Math.PI) / 180;
@@ -17,7 +17,7 @@ function createKnightState() {
   return {
     swing: null,          // { t, weapon, aim, hit: Set } while attacking
     swingCooldown: 0,
-    queued: null,         // attack from a click that happened while the sword was not ready
+    queued: null,         // attack from a press that happened while the sword was not ready
     shield: SHIELD_CHARGES,
     maxShield: SHIELD_CHARGES,
     shieldRegen: 0,       // seconds accumulated towards the next recovered charge
@@ -36,12 +36,12 @@ function updateKnight(p, input, dt, enemies, onHit) {
     p.shieldRegen = 0;
   }
 
-  // Holding right mouse blocks, as long as the shield has charges left.
-  p.blocking = !!input.mouse.rightDown && p.shield > 0;
+  // Holding the secondary key blocks, as long as the shield has charges left.
+  p.blocking = input.isDown(SECONDARY_KEY) && p.shield > 0;
 
-  // Attacks start on click, not on hold. Left click swings the sword.
+  // Attacks start on press, not on hold. The attack key swings the sword.
   p.swingCooldown = Math.max(0, p.swingCooldown - dt);
-  if (input.mouse.clicked) p.queued = true;
+  if (input.wasPressed(ATTACK_KEY)) p.queued = true;
   if (p.queued && !p.swing && p.swingCooldown === 0) {
     p.swing = { t: 0, weapon: SWORD, aim: p.aim, hit: new Set() };
     p.swingCooldown = SWORD.time + SWORD.endlag;

@@ -1,5 +1,5 @@
 import { clamp, normalize } from './math.js';
-import { RADIUS } from './shared.js';
+import { RADIUS, AIM_RANGE } from './shared.js';
 import { knight } from './playercharacters/knight.js';
 import { assassin } from './playercharacters/assassin.js';
 import { archer } from './playercharacters/archer.js';
@@ -25,8 +25,9 @@ export function createPlayer(x, y, type = 'knight') {
     radius: RADIUS,
     hp: MAX_HP,
     maxHp: MAX_HP,
-    aim: 0,
-    blocking: false,      // knight: right mouse held and shield not broken
+    aim: 0,               // direction the character acts in: the nearest enemy in range, else the facing
+    facing: 0,            // last direction the player walked in
+    blocking: false,      // knight: secondary key held and shield not broken
     dash: null,           // { t, dx, dy } while dashing
     dashCooldown: 0,
     dashCooldownMax: character.dashCooldown,
@@ -36,15 +37,27 @@ export function createPlayer(x, y, type = 'knight') {
   };
 }
 
-export function updatePlayer(p, input, dt, bounds, enemies, onHit, view) {
-  p.aim = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
+// The nearest living enemy within AIM_RANGE (centre to centre) decides the aim; without one, the player faces
+// the way it last walked.
+function aimAngle(p, enemies) {
+  let best = null, bestDist = AIM_RANGE;
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const dist = Math.hypot(e.x - p.x, e.y - p.y);
+    if (dist < bestDist) { best = e; bestDist = dist; }
+  }
+  return best ? Math.atan2(best.y - p.y, best.x - p.x) : p.facing;
+}
 
+export function updatePlayer(p, input, dt, bounds, enemies, onHit, view) {
   let mx = 0, my = 0;
   if (input.isDown('KeyW')) my -= 1;
   if (input.isDown('KeyS')) my += 1;
   if (input.isDown('KeyA')) mx -= 1;
   if (input.isDown('KeyD')) mx += 1;
   const move = normalize(mx, my);
+  if (mx || my) p.facing = Math.atan2(move.y, move.x);
+  p.aim = aimAngle(p, enemies);
 
   // Dash
   p.dashCooldown = Math.max(0, p.dashCooldown - dt);
