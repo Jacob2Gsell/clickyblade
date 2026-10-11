@@ -180,3 +180,30 @@ test('archer: the charge bar freezes while the perfect window is open', () => {
   hold(0.1); // window ends 0.05 s into this frame, the rest of the frame charges
   assert.ok(Math.abs(p.charge - 0.275) < 1e-9);
 });
+
+test('archer: holding the secondary key places only one trap', () => {
+  const p = createPlayer(500, 500, 'archer');
+  updatePlayer(p, input({ down: ['KeyK'], pressed: ['KeyK'] }), 0.01, BOUNDS, [], noHit, VIEW);
+  for (let i = 0; i < 10; i++) updatePlayer(p, input({ down: ['KeyK'] }), 0.2, BOUNDS, [], noHit, VIEW);
+  assert.equal(p.traps.length, 1);
+});
+
+test('archer: below the cap each press places a trap', () => {
+  const p = createPlayer(500, 500, 'archer');
+  for (let i = 0; i < 9; i++) p.traps.push({ x: 100, y: 100, blast: 48 });
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.01, BOUNDS, [], noHit, VIEW);
+  assert.equal(p.traps.length, 10);
+  assert.equal(p.trapCharges, 2);
+});
+
+test('archer: at the cap a press detonates all traps at once and places none', () => {
+  const p = createPlayer(500, 500, 'archer');
+  for (let i = 0; i < 10; i++) p.traps.push({ x: 500, y: 500, blast: 48 });
+  const enemy = { x: 520, y: 500, radius: 14, dead: false };
+  const hits = [];
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.01, BOUNDS, [enemy], (...a) => hits.push(a), VIEW);
+  assert.equal(hits.length, 10, 'every trap hurts the enemy in its blast');
+  assert.equal(p.traps.length, 0);
+  assert.equal(p.trapCharges, 3, 'no charge is used');
+  assert.equal(p.blasts.length, 10);
+});
