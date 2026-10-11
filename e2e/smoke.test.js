@@ -86,14 +86,13 @@ for (const character of ['knight', 'assassin', 'archer']) {
       await page.click('#btn-continue');
       assert.equal(await isOpen('#main-menu'), false);
 
-      await page.mouse.move(700, 350);
       await page.keyboard.down('KeyD');
-      await page.mouse.down();
+      await page.keyboard.down('KeyJ'); // attack (archer: charge)
       await page.waitForTimeout(150);
-      await page.mouse.up();
-      await page.mouse.down({ button: 'right' });
+      await page.keyboard.up('KeyJ');
+      await page.keyboard.down('KeyK'); // secondary (knight: shield, archer: trap)
       await page.waitForTimeout(100);
-      await page.mouse.up({ button: 'right' });
+      await page.keyboard.up('KeyK');
       await page.keyboard.up('KeyD');
       await page.keyboard.press('Space');
       await page.keyboard.press('ShiftLeft');
@@ -132,8 +131,8 @@ test('e2e: standing still, the player eventually dies and the game keeps running
     await page.click('#btn-continue');
     await page.waitForTimeout(20000);
     assert.deepEqual(errors, []);
-    // After game over a click restarts; the loop must still be alive and error-free.
-    await page.mouse.click(500, 350);
+    // After game over Enter restarts; the loop must still be alive and error-free.
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
     assert.deepEqual(errors, []);
   } finally { await page.close(); }

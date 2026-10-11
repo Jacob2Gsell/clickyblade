@@ -1,6 +1,7 @@
 import { normalize } from '../math.js';
+import { ATTACK_KEY, SECONDARY_KEY } from '../shared.js';
 
-// Archer: a bow (hold left click to charge, release to shoot) and up to three traps (right click).
+// Archer: a bow (hold the attack key to charge, release to shoot) and up to three traps (secondary key).
 
 const BASE_DAMAGE = 1;                // one plain shot; the knight's and assassin's hits also do 1
 const PERFECT_MULT = 1.5;             // damage multiplier for a release while the perfect window is open
@@ -21,6 +22,7 @@ const ARROW_RADIUS = 3;     // hit margin around the arrow
 const ARROW_KNOCKBACK = 300;
 
 export const TRAP_CHARGES = 3;
+export const MAX_TRAPS = 10;   // traps lying on the floor at once; pressing the key at the cap detonates them all
 const TRAP_REGEN_TIME = 2;      // seconds per recovered trap
 const TRAP_COOLDOWN = 0.2;      // seconds between placing two traps
 const TRAP_DAMAGE = BASE_DAMAGE * 3;
@@ -53,25 +55,32 @@ export function perfectWindowOpen(p) {
 
 function updateArcher(p, input, dt, enemies, onHit, view) {
   // Bow: pressing starts the charge, releasing shoots whatever level was reached.
-  if (input.mouse.clicked && p.charge === null) {
+  if (input.wasPressed(ATTACK_KEY) && p.charge === null) {
     p.charge = 0;
     p.stage = 0;
     p.perfectLeft = 0;
   }
   if (p.charge !== null) {
     advanceCharge(p, dt);
-    if (!input.mouse.down) {
+    if (!input.isDown(ATTACK_KEY)) {
       shoot(p);
       p.charge = null;
     }
   }
 
-  // Traps: right click places one at the archer's feet if one is charged and the cooldown is over.
+  // Traps: each press of the secondary key (not holding it) places one at the archer's feet if one is charged.
+  // At the cap the key sets off all traps on the floor instead, and places none.
   p.trapCooldown = Math.max(0, p.trapCooldown - dt);
-  if (input.mouse.rightClicked && p.trapCharges > 0 && p.trapCooldown === 0) {
-    p.traps.push({ x: p.x, y: p.y, blast: p.radius * TRAP_RADIUS_FACTOR });
-    p.trapCharges--;
-    p.trapCooldown = TRAP_COOLDOWN;
+  if (input.wasPressed(SECONDARY_KEY) && p.trapCooldown === 0) {
+    if (p.traps.length >= MAX_TRAPS) {
+      for (const trap of p.traps) detonate(p, trap, enemies, onHit);
+      p.traps = [];
+      p.trapCooldown = TRAP_COOLDOWN;
+    } else if (p.trapCharges > 0) {
+      p.traps.push({ x: p.x, y: p.y, blast: p.radius * TRAP_RADIUS_FACTOR });
+      p.trapCharges--;
+      p.trapCooldown = TRAP_COOLDOWN;
+    }
   }
   if (p.trapCharges < TRAP_CHARGES) {
     p.trapRegen += dt;
@@ -161,17 +170,22 @@ function updateTraps(p, enemies, onHit) {
   for (const trap of p.traps) {
     const triggered = enemies.some((e) => !e.dead && Math.hypot(e.x - trap.x, e.y - trap.y) <= e.radius + TRAP_TRIGGER);
     if (!triggered) continue;
-    trap.exploded = true;
-    p.blasts.push({ x: trap.x, y: trap.y, r: trap.blast, t: BLAST_TIME });
-    for (const e of enemies) {
-      if (e.dead) continue;
-      const dx = e.x - trap.x, dy = e.y - trap.y;
-      if (Math.hypot(dx, dy) > trap.blast + e.radius) continue;
-      const dir = normalize(dx, dy);
-      onHit(e, dir.x * TRAP_KNOCKBACK, dir.y * TRAP_KNOCKBACK, TRAP_DAMAGE);
-    }
+    detonate(p, trap, enemies, onHit);
   }
   p.traps = p.traps.filter((t) => !t.exploded);
+}
+
+// One trap goes off: the explosion ring is drawn and every enemy in its radius is hurt.
+function detonate(p, trap, enemies, onHit) {
+  trap.exploded = true;
+  p.blasts.push({ x: trap.x, y: trap.y, r: trap.blast, t: BLAST_TIME });
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const dx = e.x - trap.x, dy = e.y - trap.y;
+    if (Math.hypot(dx, dy) > trap.blast + e.radius) continue;
+    const dir = normalize(dx, dy);
+    onHit(e, dir.x * TRAP_KNOCKBACK, dir.y * TRAP_KNOCKBACK, TRAP_DAMAGE);
+  }
 }
 
 // Drawn behind the archer: glow, afterimages, traps on the floor, explosions and arrows in flight.
@@ -274,6 +288,7 @@ function drawChargeBar(ctx, p) {
 
 export const archer = {
   dashCooldown: 0.6,
+  aimFactor: 3,
   // The bow is slower while it is charged.
   speedFactor: (p) => (p.charge !== null ? CHARGE_SPEED : 1),
   state: createArcherState,

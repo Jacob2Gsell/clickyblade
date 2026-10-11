@@ -1,5 +1,5 @@
 import { clamp, normalize } from '../math.js';
-import { KNOCKBACK, drawBlade } from '../shared.js';
+import { KNOCKBACK, drawBlade, ATTACK_KEY, SECONDARY_KEY } from '../shared.js';
 
 // Assassin: two daggers, half the sword's reach. They stab forward; only one attacks at a time.
 const DAGGER_THRUST = 61.25; // how far a stab pushes the dagger out (75% more than 35)
@@ -19,16 +19,16 @@ function createAssassinState() {
   return {
     swing: null,          // { t, weapon, aim, hit: Set } while stabbing
     swingCooldown: 0,
-    queued: null,         // stab from a click that happened while the dagger was not ready
+    queued: null,         // stab from a press that happened while the dagger was not ready
     side: null,           // last dagger that was activated
   };
 }
 
 function updateAssassin(p, input, dt, enemies, onHit) {
-  // Attacks start on click, not on hold. Left click stabs with the left dagger, right click with the right one.
+  // Attacks start on press, not on hold. The attack key stabs with the left dagger, the secondary key with the right one.
   p.swingCooldown = Math.max(0, p.swingCooldown - dt);
-  const click = daggerFor(p, input);
-  if (click) p.queued = click;
+  const press = daggerFor(p, input);
+  if (press) p.queued = press;
   if (p.queued && !p.swing && p.swingCooldown === 0) {
     const weapon = WEAPONS[p.queued];
     p.swing = { t: 0, weapon, aim: p.aim, hit: new Set() };
@@ -52,10 +52,10 @@ function updateAssassin(p, input, dt, enemies, onHit) {
   }
 }
 
-// Left click activates the left dagger, right click the right one; left wins if both are clicked.
+// The attack key activates the left dagger, the secondary key the right one; left wins if both are pressed.
 // Switching to the other dagger resets the endlag of the previous one.
 function daggerFor(p, input) {
-  const side = input.mouse.clicked ? 'left' : input.mouse.rightClicked ? 'right' : null;
+  const side = input.wasPressed(ATTACK_KEY) ? 'left' : input.wasPressed(SECONDARY_KEY) ? 'right' : null;
   if (side && side !== p.side) {
     p.side = side;
     p.swingCooldown = 0;
@@ -110,6 +110,7 @@ function drawAssassinFront(ctx, p) {
 
 export const assassin = {
   dashCooldown: 0.4,
+  aimFactor: 0.5,
   state: createAssassinState,
   update: updateAssassin,
   drawBack: drawAssassinBack,

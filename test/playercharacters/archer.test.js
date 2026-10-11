@@ -7,18 +7,17 @@ const BOUNDS = { x: 0, y: 0, w: 1000, h: 1000 };
 const VIEW = { w: 1000, h: 1000 };
 const noHit = () => assert.fail('onHit should not be called');
 
-function mouse({ down = false, clicked = false, rightClicked = false, keys = [] } = {}) {
+function input({ down = [], pressed = [] } = {}) {
   return {
-    mouse: { x: 600, y: 500, down, clicked, rightClicked, rightDown: false },
-    isDown: (c) => keys.includes(c),
-    wasPressed: () => false,
+    isDown: (c) => down.includes(c),
+    wasPressed: (c) => pressed.includes(c),
   };
 }
 
 // Holds the bow for `held` seconds and releases it. Aim is to the right (+x).
 function shoot(p, held, onHit = noHit) {
-  updatePlayer(p, mouse({ down: true, clicked: true }), held, BOUNDS, [], onHit, VIEW);
-  updatePlayer(p, mouse({ down: false }), 0, BOUNDS, [], onHit, VIEW);
+  updatePlayer(p, input({ down: ['KeyJ'], pressed: ['KeyJ'] }), held, BOUNDS, [], onHit, VIEW);
+  updatePlayer(p, input({ down: [] }), 0, BOUNDS, [], onHit, VIEW);
 }
 
 const enemyAt = (x, y, over = {}) => ({ x, y, radius: 14, dead: false, ...over });
@@ -71,7 +70,7 @@ test('archer: releasing late in a level does normal damage', () => {
 test('archer: arrows are removed once they leave the viewport', () => {
   const p = createPlayer(500, 500, 'archer');
   shoot(p, 0.6);
-  updatePlayer(p, mouse(), 1, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input(), 1, BOUNDS, [], noHit, VIEW);
   assert.equal(p.arrows.length, 0);
 });
 
@@ -80,7 +79,7 @@ test('archer: an arrow hits an enemy once and is removed', () => {
   const e = enemyAt(540, 500);
   const hits = [];
   shoot(p, 0.6);
-  updatePlayer(p, mouse(), 0.02, BOUNDS, [e], (...a) => hits.push(a), VIEW);
+  updatePlayer(p, input(), 0.02, BOUNDS, [e], (...a) => hits.push(a), VIEW);
   assert.equal(hits.length, 1);
   assert.equal(hits[0][0], e);
   assert.equal(hits[0][3], 1);
@@ -89,29 +88,29 @@ test('archer: an arrow hits an enemy once and is removed', () => {
 
 test('archer: traps are placed on right click and limited by charges and cooldown', () => {
   const p = createPlayer(500, 500, 'archer');
-  updatePlayer(p, mouse({ rightClicked: true }), 0, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 1);
   assert.equal(p.trapCharges, 2);
   // Still on cooldown: the second click is ignored
-  updatePlayer(p, mouse({ rightClicked: true }), 0.1, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.1, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 1);
-  updatePlayer(p, mouse({ rightClicked: true }), 0.1, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.1, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 2);
 });
 
 test('archer: no trap without charges', () => {
   const p = createPlayer(500, 500, 'archer');
   p.trapCharges = 0;
-  updatePlayer(p, mouse({ rightClicked: true }), 0, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 0);
 });
 
 test('archer: a trap recharges one charge every 2 seconds', () => {
   const p = createPlayer(500, 500, 'archer');
   p.trapCharges = 0;
-  updatePlayer(p, mouse(), 1.9, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input(), 1.9, BOUNDS, [], noHit, VIEW);
   assert.equal(p.trapCharges, 0);
-  updatePlayer(p, mouse(), 0.1, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input(), 0.1, BOUNDS, [], noHit, VIEW);
   assert.equal(p.trapCharges, 1);
 });
 
@@ -122,8 +121,8 @@ test('archer: trap explosion hurts enemies within 3x the player radius, not the 
   const far = enemyAt(600, 500);    // outside the blast
   const hits = [];
   const onHit = (e, kx, ky, dmg) => hits.push({ e, dmg });
-  updatePlayer(p, mouse({ rightClicked: true }), 0, BOUNDS, [near, inBlast, far], onHit, VIEW);
-  updatePlayer(p, mouse(), 0.01, BOUNDS, [near, inBlast, far], onHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0, BOUNDS, [near, inBlast, far], onHit, VIEW);
+  updatePlayer(p, input(), 0.01, BOUNDS, [near, inBlast, far], onHit, VIEW);
   assert.equal(p.traps.length, 0);
   assert.equal(p.hp, 5);
   assert.deepEqual(hits.map((h) => h.e), [near, inBlast]);
@@ -132,14 +131,14 @@ test('archer: trap explosion hurts enemies within 3x the player radius, not the 
 
 test('archer: the blast radius is 3x the player radius', () => {
   const p = createPlayer(500, 500, 'archer');
-  updatePlayer(p, mouse({ rightClicked: true }), 0, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps[0].blast, p.radius * 3);
 });
 
 test('archer: charging slows movement to 0.75x', () => {
   const p = createPlayer(500, 500, 'archer');
-  updatePlayer(p, mouse({ down: true, clicked: true }), 0, BOUNDS, [], noHit, VIEW);
-  updatePlayer(p, mouse({ down: true, keys: ['KeyD'] }), 0.1, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ down: ['KeyJ'], pressed: ['KeyJ'] }), 0, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input({ down: ['KeyJ', 'KeyD'] }), 0.1, BOUNDS, [], noHit, VIEW);
   assert.ok(Math.abs(p.x - (500 + 220 * 0.75 * 0.1)) < 1e-9);
 });
 
@@ -155,15 +154,15 @@ test('archer: a perfect shot leaves an afterimage that follows the archer and th
   shoot(p, 0.35); // perfect: level 1 was reached at 0.225 s, its window runs until 0.375 s
   assert.equal(p.afterimages.length, 1);
   p.x = 700; // the archer moves on; the afterimage is drawn at the archer's position, so it moves with him
-  updatePlayer(p, mouse(), 0.2, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input(), 0.2, BOUNDS, [], noHit, VIEW);
   assert.equal(p.afterimages.length, 1);
-  updatePlayer(p, mouse(), 0.2, BOUNDS, [], noHit, VIEW);
+  updatePlayer(p, input(), 0.2, BOUNDS, [], noHit, VIEW);
   assert.equal(p.afterimages.length, 0);
 });
 
 test('archer: perfect window opens when a level is reached and closes after 0.15 s', () => {
   const p = createPlayer(500, 500, 'archer');
-  const hold = (dt) => updatePlayer(p, mouse({ down: true, clicked: p.charge === null }), dt, BOUNDS, [], noHit, VIEW);
+  const hold = (dt) => updatePlayer(p, input({ down: ['KeyJ'], pressed: p.charge === null ? ['KeyJ'] : [] }), dt, BOUNDS, [], noHit, VIEW);
   assert.equal(perfectWindowOpen(p), false);
   hold(0.225); // level 1 reached
   assert.equal(perfectWindowOpen(p), true);
@@ -173,11 +172,38 @@ test('archer: perfect window opens when a level is reached and closes after 0.15
 
 test('archer: the charge bar freezes while the perfect window is open', () => {
   const p = createPlayer(500, 500, 'archer');
-  const hold = (dt) => updatePlayer(p, mouse({ down: true, clicked: p.charge === null }), dt, BOUNDS, [], noHit, VIEW);
+  const hold = (dt) => updatePlayer(p, input({ down: ['KeyJ'], pressed: p.charge === null ? ['KeyJ'] : [] }), dt, BOUNDS, [], noHit, VIEW);
   hold(0.225); // level 1 reached, window starts
   assert.ok(Math.abs(p.charge - 0.225) < 1e-9);
   hold(0.1); // still inside the window: no movement
   assert.ok(Math.abs(p.charge - 0.225) < 1e-9);
   hold(0.1); // window ends 0.05 s into this frame, the rest of the frame charges
   assert.ok(Math.abs(p.charge - 0.275) < 1e-9);
+});
+
+test('archer: holding the secondary key places only one trap', () => {
+  const p = createPlayer(500, 500, 'archer');
+  updatePlayer(p, input({ down: ['KeyK'], pressed: ['KeyK'] }), 0.01, BOUNDS, [], noHit, VIEW);
+  for (let i = 0; i < 10; i++) updatePlayer(p, input({ down: ['KeyK'] }), 0.2, BOUNDS, [], noHit, VIEW);
+  assert.equal(p.traps.length, 1);
+});
+
+test('archer: below the cap each press places a trap', () => {
+  const p = createPlayer(500, 500, 'archer');
+  for (let i = 0; i < 9; i++) p.traps.push({ x: 100, y: 100, blast: 48 });
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.01, BOUNDS, [], noHit, VIEW);
+  assert.equal(p.traps.length, 10);
+  assert.equal(p.trapCharges, 2);
+});
+
+test('archer: at the cap a press detonates all traps at once and places none', () => {
+  const p = createPlayer(500, 500, 'archer');
+  for (let i = 0; i < 10; i++) p.traps.push({ x: 500, y: 500, blast: 48 });
+  const enemy = { x: 520, y: 500, radius: 14, dead: false };
+  const hits = [];
+  updatePlayer(p, input({ pressed: ['KeyK'] }), 0.01, BOUNDS, [enemy], (...a) => hits.push(a), VIEW);
+  assert.equal(hits.length, 10, 'every trap hurts the enemy in its blast');
+  assert.equal(p.traps.length, 0);
+  assert.equal(p.trapCharges, 3, 'no charge is used');
+  assert.equal(p.blasts.length, 10);
 });

@@ -62,18 +62,6 @@ let focused = false; // focus mode is visibly active (slow motion, not paused, n
 const TYPING_TIMEOUT = 500; // ms, real time
 let typingTimer;
 
-// The lexicon ignores the mouse (so clicks still reach the game); while focused, the wheel and the
-// up/down arrow keys scroll it.
-const ARROW_SCROLL = 60; // px per key press (also per key repeat)
-window.addEventListener('wheel', (e) => {
-  if (focused) lexiconEl.scrollTop += e.deltaY;
-}, { passive: true });
-window.addEventListener('keydown', (e) => {
-  if (!focused || (e.code !== 'ArrowUp' && e.code !== 'ArrowDown')) return;
-  e.preventDefault();
-  lexiconEl.scrollTop += e.code === 'ArrowDown' ? ARROW_SCROLL : -ARROW_SCROLL;
-});
-
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -185,7 +173,7 @@ function update(dt) {
   if (input.wasPressed('ShiftLeft') || input.wasPressed('ShiftRight')) slowmo = !slowmo;
 
   if (gameOver) {
-    if (input.mouse.clicked) reset();
+    if (input.wasPressed('Enter')) reset();
     return;
   }
 
@@ -288,7 +276,7 @@ function render() {
     ctx.font = 'bold 48px system-ui, sans-serif';
     ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
     ctx.font = '20px system-ui, sans-serif';
-    ctx.fillText(`Score ${score} · Wave ${waves.wave} · Click to restart`, canvas.width / 2, canvas.height / 2 + 24);
+    ctx.fillText(`Score ${score} · Wave ${waves.wave} · Press Enter to restart`, canvas.width / 2, canvas.height / 2 + 24);
     ctx.textAlign = 'left';
   }
 }

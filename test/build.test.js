@@ -285,23 +285,18 @@ test('build: every character can be started and survives ten seconds of play', (
   }
 });
 
-test('build: arrow keys and wheel scroll the lexicon only while focus mode is active', () => {
+test('build: the lexicon does not scroll with the arrow keys, not even in focus mode', () => {
   const dom = createFakeDom();
   loadBundle(dom);
   const lexicon = dom.getEl('lexicon');
   dom.listeners['btn-continue'].click();
   const win = dom.listeners.window;
   const key = (code) => ({ code, preventDefault() {} });
-  win.keydown(key('ArrowDown'));
-  assert.equal(lexicon.scrollTop, 0, 'scrolls without focus mode');
   win.keydown(key('ShiftLeft'));                        // toggle focus mode on
   for (let i = 1; i <= 5; i++) dom.frame(i * 16);
   win.keydown(key('ArrowDown'));
-  win.keydown(key('ArrowDown'));
   win.keydown(key('ArrowUp'));
-  assert.equal(lexicon.scrollTop, 60, 'down, down, up = one step down');
-  win.wheel({ deltaY: 100 });
-  assert.equal(lexicon.scrollTop, 160);
+  assert.equal(lexicon.scrollTop, 0);
 });
 
 test('build: focus mode opens the spell input and typing there does not steer the game', () => {

@@ -5,20 +5,19 @@ import { createPlayer, updatePlayer } from '../../src/player.js';
 const BOUNDS = { x: 0, y: 0, w: 1000, h: 1000 };
 const noHit = () => assert.fail('onHit should not be called');
 
-function makeInput({ clicked = false, rightClicked = false, mouse = {} } = {}) {
+function makeInput({ pressed = [] } = {}) {
   return {
-    mouse: { x: 600, y: 500, down: false, rightDown: false, clicked, rightClicked, ...mouse },
     isDown: () => false,
-    wasPressed: () => false,
+    wasPressed: (c) => pressed.includes(c),
   };
 }
 const enemyAt = (x, y, over = {}) => ({ x, y, radius: 14, dead: false, ...over });
 const assassin = () => createPlayer(500, 500, 'assassin');
 
-// Clicks, then plays the 0.12 s stab out in small steps like the real game loop does.
-function stab(p, enemies, onHit, mouse = {}) {
-  updatePlayer(p, makeInput({ clicked: true, mouse }), 0.01, BOUNDS, enemies, onHit);
-  for (let i = 0; i < 11; i++) updatePlayer(p, makeInput({ mouse }), 0.01, BOUNDS, enemies, onHit);
+// Presses the attack key, then plays the 0.12 s stab out in small steps like the real game loop does.
+function stab(p, enemies, onHit) {
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, enemies, onHit);
+  for (let i = 0; i < 11; i++) updatePlayer(p, makeInput(), 0.01, BOUNDS, enemies, onHit);
 }
 
 test('assassin: initial state has no swing, no queued stab and no active dagger', () => {
@@ -31,22 +30,22 @@ test('assassin: initial state has no swing, no queued stab and no active dagger'
 
 test('assassin: a stab lasts 0.12 s and is followed by 0.15 s endlag', () => {
   const p = assassin();
-  updatePlayer(p, makeInput({ clicked: true }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.ok(p.swing);
   updatePlayer(p, makeInput(), 0.1, BOUNDS, [], noHit);
   assert.ok(p.swing, 'still stabbing at 0.11 s');
   updatePlayer(p, makeInput(), 0.02, BOUNDS, [], noHit);
   assert.equal(p.swing, null);
   assert.ok(p.swingCooldown > 0.1, 'endlag still running');
-  updatePlayer(p, makeInput({ clicked: true }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.equal(p.swing, null, 'same dagger is not ready yet');
   assert.ok(p.queued, 'but the click is remembered');
 });
 
 test('assassin: a queued stab fires as soon as the dagger is ready', () => {
   const p = assassin();
-  updatePlayer(p, makeInput({ clicked: true }), 0.01, BOUNDS, [], noHit);
-  updatePlayer(p, makeInput({ clicked: true }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   updatePlayer(p, makeInput(), 0.3, BOUNDS, [], noHit); // stab and endlag run out
   updatePlayer(p, makeInput(), 0.01, BOUNDS, [], noHit);
   assert.ok(p.swing, 'queued stab should have started');
@@ -90,11 +89,11 @@ test('assassin: knockback points away from the assassin and does 1 damage', () =
   assert.equal(got.dmg, 1);
 });
 
-test('assassin: the stab goes where the mouse points', () => {
+test('assassin: the stab goes where the nearest enemy is', () => {
   const p = assassin();
-  const below = enemyAt(500, 555);
+  const below = enemyAt(500, 535); // 35 below the player, inside the aim range
   const hits = [];
-  stab(p, [below], (e) => hits.push(e), { x: 500, y: 700 });
+  stab(p, [below], (e) => hits.push(e));
   assert.deepEqual(hits, [below]);
 });
 
@@ -102,7 +101,7 @@ test('assassin: alternating clicks alternate the daggers without waiting for end
   const p = assassin();
   const sides = [];
   for (let i = 0; i < 4; i++) {
-    updatePlayer(p, makeInput(i % 2 === 0 ? { clicked: true } : { rightClicked: true }), 0.01, BOUNDS, [], noHit);
+    updatePlayer(p, makeInput(i % 2 === 0 ? { pressed: ['KeyJ'] } : { pressed: ['KeyK'] }), 0.01, BOUNDS, [], noHit);
     sides.push(Math.sign(p.swing.weapon.side));
     updatePlayer(p, makeInput(), 0.13, BOUNDS, [], noHit); // stab over, endlag running
   }
