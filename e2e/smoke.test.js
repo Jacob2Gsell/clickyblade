@@ -139,16 +139,41 @@ test('e2e: standing still, the player eventually dies and the game keeps running
   } finally { await page.close(); }
 });
 
+const renderLabel = (id) => page.textContent(`#${id}`);
+
 test('e2e: ASCII render mode toggles with T and draws text instead of shapes', async (t) => {
   if (!(await openGame(t))) return;
-  await page.click('#btn-continue');
-  await page.waitForTimeout(500);
-  const before = await paintedPixels();
-  await page.keyboard.press('KeyT');
-  await page.waitForTimeout(500);
-  const after = await paintedPixels();
-  await page.keyboard.press('KeyT');
-  await page.close();
-  assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
-  assert.deepEqual(errors, []);
+  try {
+    await page.click('#btn-continue');
+    await page.waitForTimeout(500);
+    const before = await paintedPixels();
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics'); // hidden by now, label still readable
+    await page.keyboard.press('KeyT');
+    await page.waitForTimeout(500);
+    const after = await paintedPixels();
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII');
+    assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
+    await page.keyboard.press('KeyT');
+    await page.waitForTimeout(100); // the toggle is applied on the next game step
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics');
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+});
+
+test('e2e: the render button in the pause menu switches the mode', async (t) => {
+  if (!(await openGame(t))) return;
+  try {
+    await page.click('#btn-continue');
+    await page.waitForTimeout(100);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(50);
+    assert.equal(await isOpen('#pause-menu'), true);
+    await page.click('#btn-render-pause');
+    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII'); // both toggles stay in sync
+    await page.click('#btn-proceed');
+    await page.waitForTimeout(500);
+    assert.ok(await paintedPixels() > 0, 'canvas looks empty in ASCII mode');
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
 });
