@@ -84,6 +84,12 @@
       background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
     }
     #btn-continue:hover { border-color: #6cf; }
+    #btn-render-main {
+      padding: 8px 20px;
+      font: 16px system-ui, sans-serif; color: #fff;
+      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
+    }
+    #btn-render-main:hover { border-color: #6cf; }
   </style>
 </head>
 <body>
@@ -94,6 +100,7 @@
     <div class="pause-title">PAUSED</div>
     <button id="btn-proceed">Proceed</button>
     <button id="btn-main-menu">Main menu</button>
+    <button id="btn-render-pause">Render: Graphics</button>
   </div>
   <div id="main-menu" class="open">
     <div class="menu-title">Clicky Blade</div>
@@ -104,6 +111,7 @@
         <button class="char-card" data-char="archer"><img src="icons/archer.svg" alt="">Archer</button>
       </div>
       <button id="btn-continue">Continue</button>
+      <button id="btn-render-main">Render: Graphics</button>
     </div>
   </div>
   <script type="module" src="src/main.js"></script>
