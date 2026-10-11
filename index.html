@@ -88,13 +88,6 @@
     }
     .char-card img { width: 110px; height: 110px; }
     .char-card:hover { border-color: #6cf; }
-    .char-card.selected { border-color: #6cf; box-shadow: 0 0 16px rgba(102, 204, 255, 0.4); }
-    #btn-continue {
-      width: 260px; padding: 12px 0;
-      font: 600 22px system-ui, sans-serif; letter-spacing: 0.1em; color: #fff;
-      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
-    }
-    #btn-continue:hover { border-color: #6cf; }
     #btn-render-main {
       padding: 8px 20px;
       font: 16px system-ui, sans-serif; color: #fff;
@@ -112,18 +105,17 @@
     <div class="pause-title">PAUSED</div>
     <button id="btn-proceed" data-key="KeyP">Proceed [P]</button>
     <button id="btn-main-menu" data-key="KeyM">Main menu [M]</button>
-    <button id="btn-render-pause" data-key="KeyR">Render: Graphics [R]</button>
+    <button id="btn-render-pause">Render: Graphics</button>
   </div>
   <div id="main-menu" class="open">
     <div class="menu-title">Clicky Blade</div>
     <div class="menu-center">
       <div class="char-row">
-        <button class="char-card selected" data-char="knight" data-key="Digit1"><img src="icons/knight.svg" alt="">Knight [1]</button>
+        <button class="char-card" data-char="knight" data-key="Digit1"><img src="icons/knight.svg" alt="">Knight [1]</button>
         <button class="char-card" data-char="assassin" data-key="Digit2"><img src="icons/assassin.svg" alt="">Assassin [2]</button>
         <button class="char-card" data-char="archer" data-key="Digit3"><img src="icons/archer.svg" alt="">Archer [3]</button>
       </div>
-      <button id="btn-continue" data-key="KeyC">Continue [C]</button>
-      <button id="btn-render-main" data-key="KeyR">Render: Graphics [R]</button>
+      <button id="btn-render-main">Render: Graphics</button>
     </div>
   </div>
   <script type="module" src="src/main.js"></script>

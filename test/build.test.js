@@ -100,7 +100,7 @@ test('build: CSS class names are shortened and the original names are gone', () 
 test('build: every class the script toggles has a CSS rule, and every class in the markup is styled', () => {
   const dom = createFakeDom();
   loadBundle(dom);
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   dom.listeners['btn-main-menu'].click();
   dom.listeners[dom.cards[1].id].click();
   const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
@@ -272,7 +272,7 @@ test('build: every character can be started and survives ten seconds of play', (
     const dom = createFakeDom();
     loadBundle(dom);
     dom.listeners[dom.cards[c].id].click();               // pick the character
-    dom.listeners['btn-continue'].click();                 // start
+    dom.listeners['card-knight'].click();                 // start
     // Press Space/Shift and click now and then, like a player would.
     const win = dom.listeners.window;
     for (let i = 1; i <= 600; i++) {
@@ -289,7 +289,7 @@ test('build: the lexicon does not scroll with the arrow keys, not even in focus 
   const dom = createFakeDom();
   loadBundle(dom);
   const lexicon = dom.getEl('lexicon');
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   const win = dom.listeners.window;
   const key = (code) => ({ code, preventDefault() {} });
   win.keydown(key('ShiftLeft'));                        // toggle focus mode on
@@ -303,7 +303,7 @@ test('build: focus mode opens the spell input and typing there does not steer th
   const dom = createFakeDom();
   loadBundle(dom);
   const field = dom.getEl('spell-input');
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   const win = dom.listeners.window;
   dom.frame(16);
   assert.notEqual(dom.activeElement, field, 'field not focused without focus mode');
@@ -339,7 +339,7 @@ function typeInSpellInput(dom, text) {
 test('build: typed letters that start a lexicon spell turn green, the other names stay plain', () => {
   const dom = createFakeDom();
   loadBundle(dom, fullLexiconScript());
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   typeInSpellInput(dom, 'ch');
   const marked = lexiconNames(dom).filter((n) => greenParts(n).length > 0);
   assert.equal(marked.length, 1, 'only "Chain Spark" starts with CH');
@@ -352,7 +352,7 @@ test('build: typed letters that start a lexicon spell turn green, the other name
 test('build: a word that stops matching takes the green letters away again', () => {
   const dom = createFakeDom();
   loadBundle(dom, fullLexiconScript());
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   typeInSpellInput(dom, 'ch');
   typeInSpellInput(dom, 'chx');
   assert.ok(lexiconNames(dom).every((n) => greenParts(n).length === 0), 'no name is green after the mismatch');
@@ -363,7 +363,7 @@ test('build: a word that stops matching takes the green letters away again', () 
 test('build: the typing timeout clears the field and the green letters', () => {
   const dom = createFakeDom();
   loadBundle(dom, fullLexiconScript());
-  dom.listeners['btn-continue'].click();
+  dom.listeners['card-knight'].click();
   const field = typeInSpellInput(dom, 'ch');
   assert.ok(lexiconNames(dom).some((n) => greenParts(n).length > 0), 'precondition: letters are green');
   dom.runTimers();

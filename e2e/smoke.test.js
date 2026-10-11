@@ -69,12 +69,15 @@ test('e2e: the built page loads without errors and shows the main menu', async (
   } finally { await page.close(); }
 });
 
-test('e2e: selecting a character highlights it', async (t) => {
+test('e2e: choosing a character starts the game right away, there is no Continue button', async (t) => {
   if (!(await openGame(t))) return;
   try {
+    assert.equal(await page.$('#btn-continue'), null);
     await page.click('[data-char="archer"]');
-    assert.equal(await isSelected('[data-char="archer"]'), true);
-    assert.equal(await isSelected('[data-char="knight"]'), false);
+    await page.waitForTimeout(100);
+    assert.equal(await isOpen('#main-menu'), false);
+    assert.equal(await isOpen('#pause-menu'), false);
+    assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
 
@@ -82,8 +85,7 @@ for (const character of ['knight', 'assassin', 'archer']) {
   test(`e2e: ${character} can start, move, attack, dash and pause without errors`, async (t) => {
     if (!(await openGame(t))) return;
     try {
-      await page.click(`[data-char="${character}"]`);
-      await page.click('#btn-continue');
+      await page.click(`[data-char="${character}"]`); // starts the game
       assert.equal(await isOpen('#main-menu'), false);
 
       await page.keyboard.down('KeyD');
@@ -114,7 +116,7 @@ for (const character of ['knight', 'assassin', 'archer']) {
 test('e2e: the main menu button returns to the menu', async (t) => {
   if (!(await openGame(t))) return;
   try {
-    await page.click('#btn-continue');
+    await page.click('button[data-char="knight"]');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(50);
     await page.click('#btn-main-menu');
@@ -128,7 +130,7 @@ test('e2e: the main menu button returns to the menu', async (t) => {
 test('e2e: standing still, the player eventually dies and the game keeps running', async (t) => {
   if (!(await openGame(t))) return;
   try {
-    await page.click('#btn-continue');
+    await page.click('button[data-char="knight"]');
     await page.waitForTimeout(20000);
     assert.deepEqual(errors, []);
     // After game over Enter restarts; the loop must still be alive and error-free.
@@ -143,18 +145,18 @@ const renderLabel = (id) => page.textContent(`#${id}`);
 test('e2e: ASCII render mode toggles with T and draws text instead of shapes', async (t) => {
   if (!(await openGame(t))) return;
   try {
-    await page.click('#btn-continue');
+    await page.click('button[data-char="knight"]');
     await page.waitForTimeout(500);
     const before = await paintedPixels();
-    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics [R]'); // hidden by now, label still readable
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics'); // hidden by now, label still readable
     await page.keyboard.press('KeyT');
     await page.waitForTimeout(500);
     const after = await paintedPixels();
-    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII [R]');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII');
     assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
     await page.keyboard.press('KeyT');
     await page.waitForTimeout(100); // the toggle is applied on the next game step
-    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics [R]');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: Graphics');
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
@@ -162,14 +164,14 @@ test('e2e: ASCII render mode toggles with T and draws text instead of shapes', a
 test('e2e: the render button in the pause menu switches the mode', async (t) => {
   if (!(await openGame(t))) return;
   try {
-    await page.click('#btn-continue');
+    await page.click('button[data-char="knight"]');
     await page.waitForTimeout(100);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(50);
     assert.equal(await isOpen('#pause-menu'), true);
     await page.click('#btn-render-pause');
-    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII [R]');
-    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII [R]'); // both toggles stay in sync
+    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII');
+    assert.equal(await renderLabel('btn-render-main'), 'Render: ASCII'); // both toggles stay in sync
     await page.click('#btn-proceed');
     await page.waitForTimeout(500);
     assert.ok(await paintedPixels() > 0, 'canvas looks empty in ASCII mode');
@@ -180,9 +182,7 @@ test('e2e: the render button in the pause menu switches the mode', async (t) => 
 test('e2e: menu buttons work with their keys, but only while their menu is open', async (t) => {
   if (!(await openGame(t))) return;
   try {
-    await page.keyboard.press('Digit2');
-    assert.equal(await isSelected('button[data-char="assassin"]'), true);
-    await page.keyboard.press('KeyC');
+    await page.keyboard.press('Digit2'); // assassin: starts the game
     await page.waitForTimeout(100);
     assert.equal(await isOpen('#main-menu'), false);
 
@@ -193,8 +193,8 @@ test('e2e: menu buttons work with their keys, but only while their menu is open'
     await page.keyboard.press('Escape');
     await page.waitForTimeout(50);
     assert.equal(await isOpen('#pause-menu'), true);
-    await page.keyboard.press('KeyR');
-    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII [R]');
+    await page.click('#btn-render-pause');
+    assert.equal(await renderLabel('btn-render-pause'), 'Render: ASCII');
     await page.keyboard.press('KeyM');
     await page.waitForTimeout(50);
     assert.equal(await isOpen('#pause-menu'), false);

@@ -21,7 +21,7 @@ let asciiMode = false;
 const renderToggles = ['btn-render-main', 'btn-render-pause'].map((id) => document.getElementById(id));
 function setAsciiMode(on) {
   asciiMode = on;
-  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'} [R]`;
+  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'}`;
 }
 for (const b of renderToggles) b.addEventListener('click', () => setAsciiMode(!asciiMode));
 
@@ -38,23 +38,22 @@ document.getElementById('btn-main-menu').addEventListener('click', () => {
   inMenu = true;
   mainMenu.classList.add('open');
 });
-document.getElementById('btn-continue').addEventListener('click', () => {
+// Choosing a character starts the game with it (there is no separate Continue button).
+let character = 'knight';
+function startGame(char) {
+  character = char;
   reset();
   inMenu = false;
   mainMenu.classList.remove('open');
-});
-let character = 'knight';
+}
 for (const card of charCards) {
-  card.addEventListener('click', () => {
-    character = card.dataset.char;
-    charCards.forEach((c) => c.classList.toggle('selected', c === card));
-  });
+  card.addEventListener('click', () => startGame(card.dataset.char));
 }
 
 // Menu buttons carry a data-key (e.g. KeyC). Pressing that key clicks the button while its menu is open.
 const menuHotkeys = [
-  [mainMenu, [...charCards, document.getElementById('btn-continue'), document.getElementById('btn-render-main')]],
-  [pauseMenu, [document.getElementById('btn-proceed'), document.getElementById('btn-main-menu'), document.getElementById('btn-render-pause')]],
+  [mainMenu, charCards],
+  [pauseMenu, [document.getElementById('btn-proceed'), document.getElementById('btn-main-menu')]],
 ];
 function pressMenuHotkeys() {
   for (const [menu, buttons] of menuHotkeys) {
