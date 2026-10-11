@@ -37,10 +37,15 @@ export function createPlayer(x, y, type = 'knight') {
   };
 }
 
-// The nearest living enemy within AIM_RANGE (centre to centre) decides the aim; without one, the player faces
+// Aim range of this player: the base range scaled by the character.
+function aimRange(p) {
+  return AIM_RANGE * CHARACTERS[p.type].aimFactor;
+}
+
+// The nearest living enemy within the aim range (centre to centre) decides the aim; without one, the player faces
 // the way it last walked.
 function aimAngle(p, enemies) {
-  let best = null, bestDist = AIM_RANGE;
+  let best = null, bestDist = aimRange(p);
   for (const e of enemies) {
     if (e.dead) continue;
     const dist = Math.hypot(e.x - p.x, e.y - p.y);
@@ -108,6 +113,13 @@ export function drawPlayer(ctx, p) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // Auto-aim range as a line, in the player's colour
+  ctx.strokeStyle = '#4af';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, aimRange(p), 0, Math.PI * 2);
+  ctx.stroke();
 
   const character = CHARACTERS[p.type];
   character.drawBack(ctx, p);

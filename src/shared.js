@@ -2,8 +2,9 @@
 
 export const RADIUS = 16;
 export const KNOCKBACK = 600;
-// Enemies whose centre is closer than this (3 x the player's radius) pull the aim onto the nearest one.
-export const AIM_RANGE = RADIUS * 3;
+// Base aim range (9 x the player's radius) for characters without an aimFactor. Enemies closer than the
+// range (centre to centre) pull the aim onto the nearest one.
+export const AIM_RANGE = RADIUS * 9;
 
 // Main action: sword (knight), left dagger (assassin), bow (archer: hold to charge, release to shoot).
 export const ATTACK_KEY = 'KeyJ';

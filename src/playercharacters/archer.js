@@ -275,6 +275,7 @@ function drawChargeBar(ctx, p) {
 
 export const archer = {
   dashCooldown: 0.6,
+  aimFactor: 3,
   // The bow is slower while it is charged.
   speedFactor: (p) => (p.charge !== null ? CHARGE_SPEED : 1),
   state: createArcherState,

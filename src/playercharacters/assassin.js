@@ -110,6 +110,7 @@ function drawAssassinFront(ctx, p) {
 
 export const assassin = {
   dashCooldown: 0.4,
+  aimFactor: 0.5,
   state: createAssassinState,
   update: updateAssassin,
   drawBack: drawAssassinBack,

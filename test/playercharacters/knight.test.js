@@ -85,10 +85,11 @@ test('knight: regeneration progress is dropped while the shield is full', () => 
   assert.equal(p.shield, 2, 'a fresh 2 s countdown, not a stale one');
 });
 
-test('knight: the sword hits within its 120 degree arc, not outside it', () => {
-  const inside = enemyAt(500 + Math.cos(deg(55)) * 50, 500 + Math.sin(deg(55)) * 50);
-  const outside = enemyAt(500 + Math.cos(deg(80)) * 50, 500 + Math.sin(deg(80)) * 50);
-  const p = knight(); // aims right
+test('knight: the sword hits within its 120 degree arc around the aim, not outside it', () => {
+  // The nearest enemy sets the aim (straight right). The other one is 100 degrees away: outside the arc.
+  const inside = enemyAt(540, 500);
+  const outside = enemyAt(500 + Math.cos(deg(100)) * 60, 500 + Math.sin(deg(100)) * 60);
+  const p = knight();
   const hits = [];
   updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [inside, outside], (e) => hits.push(e));
   assert.deepEqual(hits, [inside]);

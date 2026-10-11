@@ -114,6 +114,7 @@ function drawShield(ctx, p) {
 
 export const knight = {
   dashCooldown: 0.8,
+  aimFactor: 1,
   state: createKnightState,
   update: updateKnight,
   drawBack: drawKnightBack,

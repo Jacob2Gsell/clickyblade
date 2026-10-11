@@ -90,19 +90,14 @@ test('assassin: switching to the other dagger resets the endlag', () => {
 
 test('assassin: a dagger thrust hits enemies in front, not ones beside the body', () => {
   const enemyAt = (x, y) => ({ x, y, radius: 14, dead: false });
-  const beside = enemyAt(500, 450); // 50 above the body: beside the facing, outside the aim range
+  const beside = enemyAt(500, 450); // 50 above the body, further away than the front one
+  const front = enemyAt(525, 490);  // nearest enemy: the dagger aims at it
   const p = createPlayer(500, 500, 'assassin');
   let hits = [];
-  // Left dagger thrusts forward; at the peak of the thrust its tip is 35 px ahead (x 535).
-  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [beside], (e) => hits.push(e));
-  updatePlayer(p, makeInput(), 0.05, BOUNDS, [beside], (e) => hits.push(e));
-  assert.equal(hits.length, 0, 'enemy beside the body should be missed');
-  const front = enemyAt(525, 490);
-  const q = createPlayer(500, 500, 'assassin');
-  hits = [];
-  updatePlayer(q, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [front], (e) => hits.push(e));
-  updatePlayer(q, makeInput(), 0.05, BOUNDS, [front], (e) => hits.push(e));
-  assert.equal(hits.length, 1, 'enemy in front should be hit');
+  // Left dagger thrusts towards the nearest enemy; the one beside the body is out of its line.
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [front, beside], (e) => hits.push(e));
+  updatePlayer(p, makeInput(), 0.05, BOUNDS, [front, beside], (e) => hits.push(e));
+  assert.deepEqual(hits, [front], 'the enemy beside the body should be missed');
 });
 
 test('assassin thrust hits 55 px out but not 140 px out', () => {

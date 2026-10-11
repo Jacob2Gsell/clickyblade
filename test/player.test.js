@@ -25,7 +25,7 @@ test('createPlayer: initial state', () => {
   assert.deepEqual(p.trail, []);
 });
 
-test('aim points at the nearest enemy within 3 x the player radius', () => {
+test('aim points at the nearest enemy within 9 x the player radius', () => {
   const p = createPlayer(100, 100);
   const far = enemyAt(100, 100 + 40);   // 40 away, in range
   const near = enemyAt(100 - 20, 100);  // 20 away, nearest
@@ -41,9 +41,9 @@ test('aim turns instantly to a new target', () => {
   assert.ok(Math.abs(p.aim) < 1e-9);
 });
 
-test('enemies outside 3 x the player radius do not steer the aim', () => {
+test('enemies outside 9 x the player radius do not steer the aim', () => {
   const p = createPlayer(100, 100);
-  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(100, 100 + 3 * 16 + 5)], noHit);
+  updatePlayer(p, makeInput(), 0.01, BOUNDS, [enemyAt(100, 100 + 9 * 16 + 5)], noHit);
   assert.equal(p.aim, 0); // still facing right, the start direction
 });
 
@@ -174,10 +174,13 @@ test('swing hits an enemy in front once, with knockback away from the player', (
   assert.equal(dmg, 1);
 });
 
-test('swing misses enemies behind the player', () => {
+test('swing misses enemies behind the player when one in front is the target', () => {
   const p = createPlayer(500, 500);
-  const e = enemyAt(440, 500);
-  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [e], noHit);
+  const front = enemyAt(560, 500);
+  const behind = enemyAt(440, 500); // same distance: the first one in the list is the target
+  const hits = [];
+  updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [front, behind], (e) => hits.push(e));
+  assert.deepEqual(hits, [front]);
 });
 
 test('swing misses enemies out of reach', () => {
@@ -232,4 +235,14 @@ test('invulnerability wears off over time', () => {
   updatePlayer(p, makeInput(), 0.6, BOUNDS, [], noHit);
   assert.equal(p.invuln, 0);
   assert.equal(isPlayerVulnerable(p), true);
+});
+
+test('aim range depends on the character: assassin half, archer three times the base range', () => {
+  const enemy = enemyAt(100, 100 + 100); // 100 px below
+  const assassin = createPlayer(100, 100, 'assassin'); // range 72: out of reach
+  updatePlayer(assassin, makeInput(), 0.01, BOUNDS, [enemy], noHit);
+  assert.equal(assassin.aim, 0);
+  const archer = createPlayer(100, 100, 'archer'); // range 432: in reach
+  updatePlayer(archer, makeInput(), 0.01, BOUNDS, [enemy], noHit);
+  assert.ok(Math.abs(archer.aim - Math.PI / 2) < 1e-9);
 });
