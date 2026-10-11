@@ -260,3 +260,19 @@ test('advanceTime: hitstop slows the game to a crawl and counts down in real tim
   assert.equal(fx.hitstop, 0);
   close(advanceTime(fx, false, step), step);
 });
+
+test('waves: cleared is raised exactly once per finished wave, never before wave 1', () => {
+  const s = createWaves();
+  advanceWaves(s, 0, 0.5);
+  assert.equal(s.cleared, false, 'nothing cleared before the first wave');
+  advanceWaves(s, 0, FIRST_WAVE_PAUSE); // wave 1 starts
+  assert.equal(s.wave, 1);
+  assert.equal(s.cleared, false);
+  for (let i = 0; i < 100; i++) advanceWaves(s, 1, 0.1); // whole wave spawns while enemies live
+  assert.equal(s.cleared, false);
+  advanceWaves(s, 0, 0.01); // field is clear
+  assert.equal(s.cleared, true);
+  s.cleared = false;
+  advanceWaves(s, 0, 0.01);
+  assert.equal(s.cleared, false, 'not raised again for the same wave');
+});

@@ -6,12 +6,14 @@ import {
   createWaves, advanceWaves, spawnPoint, isDasherSpawn,
   resolveContacts, removeDead, advanceTime, HITSTOP_HIT,
 } from './rules.js';
+import { createLexicon, unlockSpells } from './lexicon.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const input = createInput(canvas);
 
 const overlay = document.getElementById('slowmo-overlay');
+const lexiconEl = document.getElementById('lexicon');
 const pauseMenu = document.getElementById('pause-menu');
 const mainMenu = document.getElementById('main-menu');
 const charCards = [...document.querySelectorAll('.char-card')];
@@ -37,10 +39,23 @@ for (const card of charCards) {
 
 const STEP = 1 / 120;
 const ARENA_MARGIN = 20;
-let bounds, player, enemies, score, waves, gameOver;
+let bounds, player, enemies, score, waves, gameOver, lexicon;
 let slowmo, paused;
 const fx = { shake: 0, hitstop: 0, timeScale: 1 }; // screenshake, hitstop and time scale
 let inMenu = true;
+let focused = false; // focus mode is visibly active (slow motion, not paused, not in a menu)
+
+// The lexicon ignores the mouse (so clicks still reach the game); while focused, the wheel and the
+// up/down arrow keys scroll it.
+const ARROW_SCROLL = 60; // px per key press (also per key repeat)
+window.addEventListener('wheel', (e) => {
+  if (focused) lexiconEl.scrollTop += e.deltaY;
+}, { passive: true });
+window.addEventListener('keydown', (e) => {
+  if (!focused || (e.code !== 'ArrowUp' && e.code !== 'ArrowDown')) return;
+  e.preventDefault();
+  lexiconEl.scrollTop += e.code === 'ArrowDown' ? ARROW_SCROLL : -ARROW_SCROLL;
+});
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -53,7 +68,33 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// Newest spell on top: a header followed by one block per spell (name, then its effects).
+function renderLexicon() {
+  const head = document.createElement('div');
+  head.classList.add('lex-title');
+  head.textContent = 'Lexicon';
+  const blocks = [...lexicon].reverse().map((spell) => {
+    const block = document.createElement('div');
+    block.classList.add('spell');
+    const name = document.createElement('div');
+    name.classList.add('spell-name');
+    name.textContent = spell.name;
+    block.append(name);
+    for (const effect of spell.effects) {
+      const line = document.createElement('div');
+      line.classList.add('spell-effect');
+      line.textContent = effect;
+      block.append(line);
+    }
+    return block;
+  });
+  lexiconEl.replaceChildren(head, ...blocks);
+  lexiconEl.scrollTop = 0; // show the newest spell
+}
+
 function reset() {
+  lexicon = createLexicon();
+  renderLexicon();
   player = createPlayer(canvas.width / 2, canvas.height / 2, character);
   enemies = [];
   score = 0;
@@ -81,6 +122,11 @@ function update(dt) {
   }
 
   if (advanceWaves(waves, enemies.length, dt)) spawnEnemy();
+  if (waves.cleared) {
+    waves.cleared = false;
+    unlockSpells(lexicon);
+    renderLexicon();
+  }
 
   updatePlayer(player, input, dt, bounds, enemies, (e, kx, ky, dmg) => {
     hitEnemy(e, kx, ky, dmg);
@@ -191,7 +237,9 @@ function frame(now) {
     acc -= STEP;
   }
   pauseMenu.classList.toggle('open', paused);
-  overlay.classList.toggle('active', slowmo && !paused && !inMenu);
+  focused = slowmo && !paused && !inMenu;
+  overlay.classList.toggle('active', focused);
+  lexiconEl.classList.toggle('active', focused);
   render();
   requestAnimationFrame(frame);
 }

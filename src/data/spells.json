@@ -1,0 +1,14 @@
+[
+  { "id": "ember-lash", "name": "Ember Lash", "effects": ["Sword swings leave a burning trail", "Burning enemies take damage over time"] },
+  { "id": "frost-step", "name": "Frost Step", "effects": ["Dash freezes nearby enemies briefly", "Dash cooldown +20%"] },
+  { "id": "gale-dash", "name": "Gale Dash", "effects": ["Dash distance +30%", "Enemies in the path are pushed aside"] },
+  { "id": "stone-skin", "name": "Stone Skin", "effects": ["Absorbs the next hit", "Movement speed -15% while active"] },
+  { "id": "chain-spark", "name": "Chain Spark", "effects": ["Hits jump to one nearby enemy", "Jump deals half damage"] },
+  { "id": "blood-pact", "name": "Blood Pact", "effects": ["Kills heal a fraction of a heart", "Max health -1"] },
+  { "id": "echo-strike", "name": "Echo Strike", "effects": ["Every third swing repeats itself", "Echo deals half damage"] },
+  { "id": "void-pull", "name": "Void Pull", "effects": ["Pulls enemies towards you", "Short cooldown after each use"] },
+  { "id": "time-sliver", "name": "Time Sliver", "effects": ["Focus slows time even further", "Focus drains faster"] },
+  { "id": "thorn-ward", "name": "Thorn Ward", "effects": ["Enemies that hit you take damage", "Wider knockback on blocked hits"] },
+  { "id": "lightning-rod", "name": "Lightning Rod", "effects": ["Marks the strongest enemy", "Marked enemy is struck after 2 s"] },
+  { "id": "phantom-blade", "name": "Phantom Blade", "effects": ["Spawns a spectral sword that orbits you", "Lasts one wave"] }
+]

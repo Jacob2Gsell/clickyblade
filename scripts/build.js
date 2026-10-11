@@ -15,8 +15,11 @@ const result = await build({
   metafile: true,
 });
 result.metafile_inputs = Object.keys(result.metafile.inputs);
-// "</script" im Code würde das Inline-Script vorzeitig beenden
-const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\/script');
+// "</script" im Code würde das Inline-Script vorzeitig beenden, "<!--" kann es in den Script-Data-Modus kippen.
+// Beides steht nur in String-/Regex-Literalen, dort ist der Backslash-Escape wirkungsgleich.
+const js = result.outputFiles[0].text
+  .replace(/<\/script/gi, '<\\/script')
+  .replace(/<!--/g, '<\\!--');
 
 let html = await readFile('index.html', 'utf8');
 if (!html.includes(SCRIPT_TAG)) {

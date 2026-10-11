@@ -19,7 +19,7 @@ const DASHER_FIRST_WAVE = 2;
 const DASHER_CHANCE = 0.25;
 
 export function createWaves() {
-  return { wave: 0, spawnQueue: 0, spawnTimer: 0, wavePause: FIRST_WAVE_PAUSE };
+  return { wave: 0, spawnQueue: 0, spawnTimer: 0, wavePause: FIRST_WAVE_PAUSE, cleared: false, rewardedWave: 0 };
 }
 
 export const waveSize = (wave) => 3 + wave * 2;
@@ -37,8 +37,13 @@ export function spawnPoint(bounds, side, r) {
 
 // Once the field is clear, pause briefly then start the next, bigger wave.
 // Returns true when an enemy should be spawned right now.
+// s.cleared is raised once per finished wave; the caller hands out the reward and resets it.
 export function advanceWaves(s, enemyCount, dt) {
   if (s.spawnQueue === 0 && enemyCount === 0) {
+    if (s.wave > s.rewardedWave) {
+      s.rewardedWave = s.wave;
+      s.cleared = true;
+    }
     s.wavePause -= dt;
     if (s.wavePause <= 0) {
       s.wave++;
