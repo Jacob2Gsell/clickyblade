@@ -5,14 +5,24 @@ import {
   createWaves, advanceWaves, waveSize, spawnInterval, isDasherSpawn, spawnPoint,
   resolveContacts, removeDead, advanceTime,
   SLOWMO_SCALE, HITSTOP_SCALE, HITSTOP_HIT, HITSTOP_HURT,
-  SHIELD_KNOCKBACK, BLOCK_COOLDOWN, FIRST_WAVE_PAUSE, WAVE_PAUSE,
+  BLOCK_COOLDOWN, FIRST_WAVE_PAUSE, WAVE_PAUSE,
 } from '../src/rules.js';
+import { updateEnemies } from '../src/enemies/enemy.js';
+import { AIM_RANGE } from '../src/shared.js';
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 const enemyAt = (x, y, over = {}) => ({
-  x, y, radius: 14, dead: false, kx: 0, ky: 0, stun: 0, blockCd: 0, hp: 2, maxHp: 2, ...over,
+  x, y, radius: 14, dead: false, kx: 0, ky: 0, stun: 0, blockCd: 0, hp: 2, maxHp: 2, speed: 0, ...over,
 });
 const freshFx = () => ({ shake: 0, hitstop: 0 });
+const bounds = { x: 0, y: 0, w: 2000, h: 2000 };
+
+// Plays the enemy forward on its own and returns how far it travelled.
+function travelled(e, player) {
+  const x0 = e.x, y0 = e.y;
+  for (let t = 0; t < 3; t += 1 / 120) updateEnemies([e], player, 1 / 120, bounds);
+  return Math.hypot(e.x - x0, e.y - y0);
+}
 
 // ---- waves ----
 
@@ -165,7 +175,7 @@ test('resolveContacts: an enemy in front of the raised shield is blocked, not hu
   p.blocking = true;
   const e = enemyAt(520, 500);
   const fx = freshFx();
-  resolveContacts(p, [e], fx);
+  resolveContacts(p, [e], fx, bounds);
   assert.equal(p.hp, p.maxHp);
   assert.equal(p.shield, p.maxShield - 1);
   assert.equal(e.blockCd, BLOCK_COOLDOWN);
@@ -173,7 +183,64 @@ test('resolveContacts: an enemy in front of the raised shield is blocked, not hu
   assert.ok(e.stun > 0);
   assert.equal(fx.shake, 5);
   assert.equal(fx.hitstop, HITSTOP_HIT);
-  assert.ok(Math.hypot(e.kx, e.ky) <= SHIELD_KNOCKBACK, 'heavier enemies are pushed less, never more');
+});
+
+test('resolveContacts: a block throws back the blocked enemy by the aim range', () => {
+  const p = createPlayer(500, 500, 'knight');
+  p.aim = 0;
+  p.blocking = true;
+  const e = enemyAt(520, 500);
+  resolveContacts(p, [e], freshFx(), bounds);
+  close(travelled(e, p), AIM_RANGE, AIM_RANGE * 0.05);
+});
+
+test('resolveContacts: a block throws back every living enemy inside the aim range, not the others', () => {
+  const p = createPlayer(500, 500, 'knight');
+  p.aim = 0;
+  p.blocking = true;
+  const blocked = enemyAt(520, 500);
+  const near = enemyAt(500, 500 - AIM_RANGE + 20);     // not in front of the shield, still within range
+  const dead = enemyAt(500, 500 + 40, { dead: true });  // in range, but dead
+  const far = enemyAt(500 + AIM_RANGE + 30, 500);       // outside the range
+  resolveContacts(p, [blocked, near, dead, far], freshFx(), bounds);
+  assert.ok(blocked.kx > 0 && Math.hypot(blocked.kx, blocked.ky) > 0);
+  assert.ok(near.ky < 0 && near.kx === 0, 'pushed straight away from the knight, upwards on screen');
+  assert.equal(dead.kx, 0);
+  assert.equal(dead.ky, 0);
+  assert.equal(far.kx, 0);
+  assert.equal(far.ky, 0);
+});
+
+test('resolveContacts: a thrown-back enemy moves along the vector from the knight, not the shield direction', () => {
+  const p = createPlayer(500, 500, 'knight');
+  p.aim = 0; // shield faces right, enemy stands up and left of the knight
+  p.blocking = true;
+  const blocked = enemyAt(520, 500);
+  const other = enemyAt(500 - 60, 500 - 60);
+  resolveContacts(p, [blocked, other], freshFx(), bounds);
+  close(Math.atan2(other.ky, other.kx), Math.atan2(-60, -60), 1e-9);
+});
+
+test('resolveContacts: a block without bounds still throws back and does not crash', () => {
+  const p = createPlayer(500, 500, 'knight');
+  p.aim = 0;
+  p.blocking = true;
+  const e = enemyAt(520, 500);
+  resolveContacts(p, [e], freshFx());
+  close(travelled(e, p), AIM_RANGE, AIM_RANGE * 0.05);
+});
+
+test('resolveContacts: enemies stop at the arena edge instead of leaving the arena', () => {
+  const edge = { x: 0, y: 0, w: 600, h: 600 };
+  const p = createPlayer(60, 300, 'knight');
+  p.aim = Math.PI; // shield faces left, towards the edge
+  p.blocking = true;
+  const e = enemyAt(40, 300); // 26 px from the edge at x = radius (14)
+  resolveContacts(p, [e], freshFx(), edge);
+  const dist = travelled(e, p);
+  assert.ok(dist <= 26 + 1e-6, `travelled ${dist}`);
+  assert.ok(dist >= 24, `travelled ${dist}`);
+  assert.ok(e.x >= edge.x + e.radius - 1e-9, 'stays inside the arena');
 });
 
 test('resolveContacts: the same enemy uses up only one charge during its block cooldown', () => {
@@ -181,9 +248,9 @@ test('resolveContacts: the same enemy uses up only one charge during its block c
   p.aim = 0;
   p.blocking = true;
   const e = enemyAt(520, 500);
-  resolveContacts(p, [e], freshFx());
-  resolveContacts(p, [e], freshFx());
-  resolveContacts(p, [e], freshFx());
+  resolveContacts(p, [e], freshFx(), bounds);
+  resolveContacts(p, [e], freshFx(), bounds);
+  resolveContacts(p, [e], freshFx(), bounds);
   assert.equal(p.shield, p.maxShield - 1);
   assert.equal(p.hp, p.maxHp, 'still no damage while blocked');
 });
@@ -202,10 +269,10 @@ test('resolveContacts: the shield breaks after its last charge and then no longe
   p.aim = 0;
   p.blocking = true;
   p.shield = 1;
-  resolveContacts(p, [enemyAt(520, 500)], freshFx());
+  resolveContacts(p, [enemyAt(520, 500)], freshFx(), bounds);
   assert.equal(p.shield, 0);
   assert.equal(p.blocking, false);
-  resolveContacts(p, [enemyAt(520, 500)], freshFx());
+  resolveContacts(p, [enemyAt(520, 500)], freshFx(), bounds);
   assert.equal(p.hp, p.maxHp - 1);
 });
 
@@ -214,7 +281,7 @@ test('resolveContacts: a block never lowers an existing shake or hitstop', () =>
   p.aim = 0;
   p.blocking = true;
   const fx = { shake: 9, hitstop: 1 };
-  resolveContacts(p, [enemyAt(520, 500)], fx);
+  resolveContacts(p, [enemyAt(520, 500)], fx, bounds);
   assert.equal(fx.shake, 9);
   assert.equal(fx.hitstop, 1);
 });

@@ -2,7 +2,7 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createInput } from '../src/input.js';
 
-// Minimal EventTarget-style fakes for window and canvas.
+// Minimal EventTarget-style fake for window.
 function fakeTarget(extra = {}) {
   const handlers = {};
   return {
@@ -12,11 +12,10 @@ function fakeTarget(extra = {}) {
   };
 }
 
-let win, canvas, savedWindow;
+let win, savedWindow;
 beforeEach(() => {
   savedWindow = globalThis.window;
   win = fakeTarget();
-  canvas = fakeTarget({ getBoundingClientRect: () => ({ left: 10, top: 20 }) });
   globalThis.window = win;
 });
 afterEach(() => { globalThis.window = savedWindow; });
@@ -24,7 +23,7 @@ afterEach(() => { globalThis.window = savedWindow; });
 const key = (code, extra = {}) => ({ code, preventDefault() {}, ...extra });
 
 test('isDown reflects keydown/keyup', () => {
-  const input = createInput(canvas);
+  const input = createInput();
   win.fire('keydown', key('KeyW'));
   assert.equal(input.isDown('KeyW'), true);
   win.fire('keyup', { code: 'KeyW' });
@@ -32,7 +31,7 @@ test('isDown reflects keydown/keyup', () => {
 });
 
 test('wasPressed is true once until endFrame, ignoring key repeat', () => {
-  const input = createInput(canvas);
+  const input = createInput();
   win.fire('keydown', key('KeyQ'));
   win.fire('keydown', key('KeyQ')); // auto-repeat
   assert.equal(input.wasPressed('KeyQ'), true);
@@ -44,7 +43,7 @@ test('wasPressed is true once until endFrame, ignoring key repeat', () => {
 });
 
 test('Space keydown calls preventDefault, other keys do not', () => {
-  createInput(canvas);
+  createInput();
   let prevented = 0;
   win.fire('keydown', key('Space', { preventDefault: () => prevented++ }));
   win.fire('keydown', key('KeyA', { preventDefault: () => prevented++ }));
@@ -52,14 +51,14 @@ test('Space keydown calls preventDefault, other keys do not', () => {
 });
 
 test('window blur releases all keys', () => {
-  const input = createInput(canvas);
+  const input = createInput();
   win.fire('keydown', key('KeyD'));
   win.fire('blur');
   assert.equal(input.isDown('KeyD'), false);
 });
 
 test('letters typed into a text field are not game input, but keyup still releases them', () => {
-  const input = createInput(canvas);
+  const input = createInput();
   const field = { tagName: 'INPUT' };
   win.fire('keydown', key('KeyW', { target: field }));
   assert.equal(input.isDown('KeyW'), false);
@@ -70,7 +69,7 @@ test('letters typed into a text field are not game input, but keyup still releas
 });
 
 test('Shift and Escape still count while a text field has focus', () => {
-  const input = createInput(canvas);
+  const input = createInput();
   const field = { tagName: 'INPUT' };
   win.fire('keydown', key('ShiftLeft', { target: field }));
   assert.equal(input.wasPressed('ShiftLeft'), true);
@@ -78,9 +77,3 @@ test('Shift and Escape still count while a text field has focus', () => {
   assert.equal(input.wasPressed('Escape'), true);
 });
 
-test('context menu is suppressed on the canvas', () => {
-  createInput(canvas);
-  let prevented = false;
-  canvas.fire('contextmenu', { preventDefault: () => { prevented = true; } });
-  assert.equal(prevented, true);
-});

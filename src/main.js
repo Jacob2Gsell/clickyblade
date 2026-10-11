@@ -12,43 +12,48 @@ import { spawnDamageNumber, updateDamageNumbers, drawDamageNumbers } from './dam
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const input = createInput(canvas);
+const input = createInput();
 // ASCII mode draws the scene here first, then converts it to characters on the main canvas.
 const sceneCanvas = document.createElement('canvas');
 const sceneCtx = sceneCanvas.getContext('2d');
 const drawAscii = createAsciiRenderer();
 let asciiMode = false;
-const renderToggles = ['btn-render-main', 'btn-render-pause'].map((id) => document.getElementById(id));
+const renderLabels = ['render-main', 'render-pause'].map((id) => document.getElementById(id));
 function setAsciiMode(on) {
   asciiMode = on;
-  for (const b of renderToggles) b.textContent = `Render: ${on ? 'ASCII' : 'Graphics'}`;
+  for (const el of renderLabels) el.textContent = `Render: ${on ? 'ASCII' : 'Graphics'} [R]`;
 }
-for (const b of renderToggles) b.addEventListener('click', () => setAsciiMode(!asciiMode));
 
 const overlay = document.getElementById('slowmo-overlay');
 const lexiconEl = document.getElementById('lexicon');
 const spellInput = document.getElementById('spell-input');
 const pauseMenu = document.getElementById('pause-menu');
 const mainMenu = document.getElementById('main-menu');
-const charCards = [...document.querySelectorAll('.char-card')];
-document.getElementById('btn-proceed').addEventListener('click', () => { paused = false; });
-document.getElementById('btn-main-menu').addEventListener('click', () => {
+let character = 'knight';
+// Choosing a character starts the game with it (there is no separate Continue button).
+function startGame(char) {
+  character = char;
+  reset();
+  inMenu = false;
+  mainMenu.classList.remove('open');
+}
+function openMainMenu() {
   paused = false;
   slowmo = false;
   inMenu = true;
   mainMenu.classList.add('open');
-});
-document.getElementById('btn-continue').addEventListener('click', () => {
-  reset();
-  inMenu = false;
-  mainMenu.classList.remove('open');
-});
-let character = 'knight';
-for (const card of charCards) {
-  card.addEventListener('click', () => {
-    character = card.dataset.char;
-    charCards.forEach((c) => c.classList.toggle('selected', c === card));
-  });
+}
+
+// Menu keys: pressing one runs its action while that menu is on screen.
+const menuKeys = [
+  { menu: mainMenu, actions: { Digit1: () => startGame('knight'), Digit2: () => startGame('assassin'), Digit3: () => startGame('archer') } },
+  { menu: pauseMenu, actions: { KeyP: () => { paused = false; }, KeyM: openMainMenu } },
+];
+function pressMenuKeys() {
+  for (const { menu, actions } of menuKeys) {
+    if (!menu.classList.contains('open')) continue;
+    for (const [code, action] of Object.entries(actions)) if (input.wasPressed(code)) action();
+  }
 }
 
 const STEP = 1 / 120;
@@ -196,7 +201,7 @@ function update(dt) {
   updateEnemies(enemies, player, dt, bounds);
   updateDamageNumbers(damageNumbers, dt);
 
-  if (resolveContacts(player, enemies, fx)) gameOver = true;
+  if (resolveContacts(player, enemies, fx, bounds)) gameOver = true;
 
   const { alive, killed } = removeDead(enemies);
   enemies = alive;
@@ -294,7 +299,8 @@ function frame(now) {
   last = now;
   while (acc >= STEP) {
     if (input.wasPressed('Escape') && !gameOver && !inMenu) paused = !paused;
-    if (input.wasPressed('KeyT')) setAsciiMode(!asciiMode);
+    pressMenuKeys();
+    if (input.wasPressed('KeyR')) setAsciiMode(!asciiMode);
     if (!paused && !inMenu) {
       update(advanceTime(fx, slowmo, STEP));
     }

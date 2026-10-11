@@ -6,9 +6,10 @@
   <title>Clicky Blade</title>
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
-    canvas { display: block; cursor: crosshair; }
+    * { cursor: none; } /* the game is keyboard only, so the mouse pointer is never shown */
+    canvas { display: block; }
     #slowmo-overlay {
-      position: fixed; inset: 0; pointer-events: none;
+      position: fixed; inset: 0;
       background: rgba(0, 0, 0, 0.35);
       -webkit-backdrop-filter: blur(6px);
       backdrop-filter: blur(6px);
@@ -23,7 +24,7 @@
     #lexicon {
       position: fixed; left: 24px; top: 80px; bottom: 24px; width: 220px; z-index: 5;
       display: flex; flex-direction: column; gap: 8px; overflow: hidden;
-      pointer-events: none; opacity: 0; transition: opacity 0.25s;
+      opacity: 0; transition: opacity 0.25s;
       font-family: system-ui, sans-serif; color: #fff;
     }
     #lexicon.active { opacity: 1; }
@@ -44,9 +45,9 @@
       padding: 8px 10px; box-sizing: border-box;
       font: 16px system-ui, sans-serif; color: #fff;
       background: #1f232a; border: 2px solid #3a404b; border-radius: 6px; outline: none;
-      pointer-events: none; opacity: 0; transition: opacity 0.25s;
+      opacity: 0; transition: opacity 0.25s;
     }
-    #spell-input.active { opacity: 1; pointer-events: auto; }
+    #spell-input.active { opacity: 1; }
     #spell-input.active:focus { border-color: #6cf; }
     #pause-menu {
       display: none; position: fixed; inset: 0; z-index: 10;
@@ -56,13 +57,11 @@
     }
     #pause-menu.open { display: flex; }
     .pause-title { font-size: 48px; font-weight: bold; margin-bottom: 16px; }
-    #pause-menu button {
-      width: 220px; padding: 10px 0;
+    .menu-item {
+      width: 220px; padding: 10px 0; box-sizing: border-box; text-align: center;
       font: 18px system-ui, sans-serif; color: #fff;
       background: #1f232a; border: 2px solid #3a404b; border-radius: 4px;
-      cursor: pointer;
     }
-    #pause-menu button:hover { border-color: #6cf; }
     #main-menu {
       display: none; position: fixed; inset: 0; z-index: 20;
       flex-direction: column; align-items: center;
@@ -81,26 +80,13 @@
     }
     .char-row { display: flex; gap: 24px; }
     .char-card {
-      width: 180px; height: 240px;
+      width: 180px; height: 240px; box-sizing: border-box;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
       background: #1f232a; border: 2px solid #3a404b; border-radius: 6px;
-      font: 18px system-ui, sans-serif; color: #fff; cursor: pointer;
+      font: 18px system-ui, sans-serif; color: #fff;
     }
     .char-card img { width: 110px; height: 110px; }
-    .char-card:hover { border-color: #6cf; }
-    .char-card.selected { border-color: #6cf; box-shadow: 0 0 16px rgba(102, 204, 255, 0.4); }
-    #btn-continue {
-      width: 260px; padding: 12px 0;
-      font: 600 22px system-ui, sans-serif; letter-spacing: 0.1em; color: #fff;
-      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
-    }
-    #btn-continue:hover { border-color: #6cf; }
-    #btn-render-main {
-      padding: 8px 20px;
-      font: 16px system-ui, sans-serif; color: #fff;
-      background: #1f232a; border: 2px solid #3a404b; border-radius: 4px; cursor: pointer;
-    }
-    #btn-render-main:hover { border-color: #6cf; }
+    .render-status { font: 16px system-ui, sans-serif; color: #ccc; }
   </style>
 </head>
 <body>
@@ -110,20 +96,19 @@
   <input id="spell-input" type="text" placeholder="Zauberspruch" autocomplete="off" spellcheck="false" maxlength="40">
   <div id="pause-menu">
     <div class="pause-title">PAUSED</div>
-    <button id="btn-proceed">Proceed</button>
-    <button id="btn-main-menu">Main menu</button>
-    <button id="btn-render-pause">Render: Graphics</button>
+    <div class="menu-item">Proceed [P]</div>
+    <div class="menu-item">Main menu [M]</div>
+    <div class="menu-item" id="render-pause">Render: Graphics [R]</div>
   </div>
   <div id="main-menu" class="open">
     <div class="menu-title">Clicky Blade</div>
     <div class="menu-center">
       <div class="char-row">
-        <button class="char-card selected" data-char="knight"><img src="icons/knight.svg" alt="">Knight</button>
-        <button class="char-card" data-char="assassin"><img src="icons/assassin.svg" alt="">Assassin</button>
-        <button class="char-card" data-char="archer"><img src="icons/archer.svg" alt="">Archer</button>
+        <div class="char-card"><img src="icons/knight.svg" alt="">Knight [1]</div>
+        <div class="char-card"><img src="icons/assassin.svg" alt="">Assassin [2]</div>
+        <div class="char-card"><img src="icons/archer.svg" alt="">Archer [3]</div>
       </div>
-      <button id="btn-continue">Continue</button>
-      <button id="btn-render-main">Render: Graphics</button>
+      <div class="menu-item" id="render-main">Render: Graphics [R]</div>
     </div>
   </div>
   <script type="module" src="src/main.js"></script>

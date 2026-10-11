@@ -59,6 +59,14 @@ export function shoveEnemy(e, kx, ky) {
   e.stun = STUN_TIME;
 }
 
+// Throws an enemy about `distance` px along (dx, dy). The speed is chosen so that the decaying knockback
+// covers that distance, whatever the enemy's weight.
+export function throwEnemy(e, dx, dy, distance) {
+  e.kx = dx * distance * FRICTION;
+  e.ky = dy * distance * FRICTION;
+  e.stun = STUN_TIME;
+}
+
 // Dasher: stands still for DASH_STOP, then dashes in a straight line toward
 // the point where the player was when the dash started.
 function updateDasher(e, player, dt) {
