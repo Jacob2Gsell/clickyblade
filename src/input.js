@@ -2,8 +2,8 @@
 const SHARED_KEYS = new Set(['ShiftLeft', 'ShiftRight', 'Escape']);
 
 // Keyboard state. Call endFrame() once per update tick to clear one-shot presses.
-// The mouse is not used during play; it only drives the menus (plain DOM clicks).
-export function createInput(canvas) {
+// The game is keyboard only: there is no mouse input.
+export function createInput() {
   const keys = new Set();
   const pressed = new Set();
 
@@ -19,8 +19,6 @@ export function createInput(canvas) {
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   window.addEventListener('blur', () => keys.clear());
-
-  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   return {
     isDown: (code) => keys.has(code),

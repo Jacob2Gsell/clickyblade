@@ -39,7 +39,7 @@ test('assassin: a stab lasts 0.12 s and is followed by 0.15 s endlag', () => {
   assert.ok(p.swingCooldown > 0.1, 'endlag still running');
   updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.equal(p.swing, null, 'same dagger is not ready yet');
-  assert.ok(p.queued, 'but the click is remembered');
+  assert.ok(p.queued, 'but the press is remembered');
 });
 
 test('assassin: a queued stab fires as soon as the dagger is ready', () => {
@@ -97,7 +97,7 @@ test('assassin: the stab goes where the nearest enemy is', () => {
   assert.deepEqual(hits, [below]);
 });
 
-test('assassin: alternating clicks alternate the daggers without waiting for endlag', () => {
+test('assassin: alternating presses alternate the daggers without waiting for endlag', () => {
   const p = assassin();
   const sides = [];
   for (let i = 0; i < 4; i++) {

@@ -52,7 +52,7 @@ test('assassin: never blocks', () => {
   assert.equal(p.blocking, false);
 });
 
-test('assassin: left click swings the left dagger, right click the right one', () => {
+test('assassin: the attack key swings the left dagger, the secondary key the right one', () => {
   const p = createPlayer(500, 500, 'assassin');
   updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   assert.equal(p.swing.weapon.side < 0, true);
