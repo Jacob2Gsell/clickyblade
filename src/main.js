@@ -188,9 +188,8 @@ function update(dt) {
   }
 
   updatePlayer(player, input, dt, bounds, enemies, (e, kx, ky, dmg) => {
-    const taken = Math.min(dmg, Math.max(e.hp, 0)); // health actually removed, not overkill
     hitEnemy(e, kx, ky, dmg);
-    if (taken > 0) spawnDamageNumber(damageNumbers, e, taken);
+    spawnDamageNumber(damageNumbers, e, dmg);
     fx.shake = Math.max(fx.shake, 6);
     fx.hitstop = Math.max(fx.hitstop, HITSTOP_HIT);
   }, { w: canvas.width, h: canvas.height });
