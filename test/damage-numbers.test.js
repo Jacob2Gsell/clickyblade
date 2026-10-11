@@ -16,6 +16,18 @@ test('spawnDamageNumber: starts above the enemy with the taken amount', () => {
   assert.equal(list[0].text, '1');
 });
 
+test('spawnDamageNumber: shows the attack damage even if the enemy has less health left', () => {
+  const list = [];
+  spawnDamageNumber(list, { ...enemy, hp: 0.5 }, 1);
+  assert.equal(list[0].text, '1');
+});
+
+test('spawnDamageNumber: a hit that kills shows its full damage', () => {
+  const list = [];
+  spawnDamageNumber(list, { ...enemy, hp: 0, dead: true }, 3);
+  assert.equal(list[0].text, '3');
+});
+
 test('spawnDamageNumber: keeps one decimal for fractional damage', () => {
   const list = [];
   spawnDamageNumber(list, enemy, 1.5);
