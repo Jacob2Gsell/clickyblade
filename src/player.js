@@ -38,7 +38,7 @@ export function createPlayer(x, y, type = 'knight') {
 }
 
 // Aim range of this player: the base range scaled by the character.
-function aimRange(p) {
+export function aimRange(p) {
   return AIM_RANGE * CHARACTERS[p.type].aimFactor;
 }
 

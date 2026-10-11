@@ -21,7 +21,7 @@ let asciiMode = false;
 const renderLabels = ['render-main', 'render-pause'].map((id) => document.getElementById(id));
 function setAsciiMode(on) {
   asciiMode = on;
-  for (const el of renderLabels) el.textContent = `Render: ${on ? 'ASCII' : 'Graphics'} [T]`;
+  for (const el of renderLabels) el.textContent = `Render: ${on ? 'ASCII' : 'Graphics'} [R]`;
 }
 
 const overlay = document.getElementById('slowmo-overlay');
@@ -201,7 +201,7 @@ function update(dt) {
   updateEnemies(enemies, player, dt, bounds);
   updateDamageNumbers(damageNumbers, dt);
 
-  if (resolveContacts(player, enemies, fx)) gameOver = true;
+  if (resolveContacts(player, enemies, fx, bounds)) gameOver = true;
 
   const { alive, killed } = removeDead(enemies);
   enemies = alive;
@@ -300,7 +300,7 @@ function frame(now) {
   while (acc >= STEP) {
     if (input.wasPressed('Escape') && !gameOver && !inMenu) paused = !paused;
     pressMenuKeys();
-    if (input.wasPressed('KeyT')) setAsciiMode(!asciiMode);
+    if (input.wasPressed('KeyR')) setAsciiMode(!asciiMode);
     if (!paused && !inMenu) {
       update(advanceTime(fx, slowmo, STEP));
     }

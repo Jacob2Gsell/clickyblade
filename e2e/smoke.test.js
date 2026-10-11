@@ -142,26 +142,26 @@ test('e2e: standing still, the player eventually dies and the game keeps running
 
 const renderLabel = (id) => page.textContent(`#${id}`);
 
-test('e2e: ASCII render mode toggles with T and draws text instead of shapes', async (t) => {
+test('e2e: ASCII render mode toggles with R and draws text instead of shapes', async (t) => {
   if (!(await openGame(t))) return;
   try {
     await page.keyboard.press('Digit1');
     await page.waitForTimeout(500);
     const before = await paintedPixels();
-    assert.equal(await renderLabel('render-main'), 'Render: Graphics [T]'); // hidden by now, label still readable
-    await page.keyboard.press('KeyT');
+    assert.equal(await renderLabel('render-main'), 'Render: Graphics [R]'); // hidden by now, label still readable
+    await page.keyboard.press('KeyR');
     await page.waitForTimeout(500);
     const after = await paintedPixels();
-    assert.equal(await renderLabel('render-main'), 'Render: ASCII [T]');
+    assert.equal(await renderLabel('render-main'), 'Render: ASCII [R]');
     assert.ok(before > 0 && after > 0, `nothing painted: ${before} / ${after}`);
-    await page.keyboard.press('KeyT');
+    await page.keyboard.press('KeyR');
     await page.waitForTimeout(100); // the toggle is applied on the next game step
-    assert.equal(await renderLabel('render-main'), 'Render: Graphics [T]');
+    assert.equal(await renderLabel('render-main'), 'Render: Graphics [R]');
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
 
-test('e2e: T in the pause menu switches the mode and both labels stay in sync', async (t) => {
+test('e2e: R in the pause menu switches the mode and both labels stay in sync', async (t) => {
   if (!(await openGame(t))) return;
   try {
     await page.keyboard.press('Digit1');
@@ -169,10 +169,10 @@ test('e2e: T in the pause menu switches the mode and both labels stay in sync', 
     await page.keyboard.press('Escape');
     await page.waitForTimeout(50);
     assert.equal(await isOpen('#pause-menu'), true);
-    await page.keyboard.press('KeyT');
+    await page.keyboard.press('KeyR');
     await page.waitForTimeout(50);
-    assert.equal(await renderLabel('render-pause'), 'Render: ASCII [T]');
-    assert.equal(await renderLabel('render-main'), 'Render: ASCII [T]');
+    assert.equal(await renderLabel('render-pause'), 'Render: ASCII [R]');
+    assert.equal(await renderLabel('render-main'), 'Render: ASCII [R]');
     await page.keyboard.press('KeyP');
     await page.waitForTimeout(500);
     assert.ok(await paintedPixels() > 0, 'canvas looks empty in ASCII mode');
