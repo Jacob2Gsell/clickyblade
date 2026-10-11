@@ -86,6 +86,26 @@ test('window blur releases all keys and the mouse', () => {
   assert.equal(input.mouse.down, false);
 });
 
+test('letters typed into a text field are not game input, but keyup still releases them', () => {
+  const input = createInput(canvas);
+  const field = { tagName: 'INPUT' };
+  win.fire('keydown', key('KeyW', { target: field }));
+  assert.equal(input.isDown('KeyW'), false);
+  assert.equal(input.wasPressed('KeyW'), false);
+  win.fire('keydown', key('KeyD'));
+  win.fire('keyup', { code: 'KeyD', target: field });
+  assert.equal(input.isDown('KeyD'), false);
+});
+
+test('Shift and Escape still count while a text field has focus', () => {
+  const input = createInput(canvas);
+  const field = { tagName: 'INPUT' };
+  win.fire('keydown', key('ShiftLeft', { target: field }));
+  assert.equal(input.wasPressed('ShiftLeft'), true);
+  win.fire('keydown', key('Escape', { target: field }));
+  assert.equal(input.wasPressed('Escape'), true);
+});
+
 test('context menu is suppressed on the canvas', () => {
   createInput(canvas);
   let prevented = false;

@@ -44,6 +44,12 @@ test('build: produces dist/index.html', () => {
   assert.ok(existsSync(join(work, 'dist', 'index.html')));
 });
 
+test('build: the spell input is limited to 40 characters', () => {
+  const tag = html.match(/<input[^>]*id="spell-input"[^>]*>/)?.[0];
+  assert.ok(tag, 'spell input not found in the output');
+  assert.match(tag, /maxlength="40"/);
+});
+
 test('build: output is a single self-contained file', () => {
   assert.ok(!html.includes('type="module"'), 'module script tag left over');
   assert.ok(!html.includes('src/main.js'), 'reference to the source entry left over');
@@ -165,26 +171,50 @@ function createFakeDom() {
     get: (_t, prop) => (typeof prop === 'string' ? () => { draws.calls++; } : undefined),
     set: () => true,
   });
-  const makeEl = (id) => ({
-    id,
-    width: 0, height: 0,
-    dataset: { char: id },
-    classList: {
-      add(c) { dom.classesUsed.add(c); }, remove(c) { dom.classesUsed.add(c); }, toggle(c) { dom.classesUsed.add(c); },
-    },
-    addEventListener(ev, fn) { (listeners[id] ||= {})[ev] = fn; },
-    append() {}, replaceChildren() {}, textContent: '',
-    getContext: () => ctx,
-    getBoundingClientRect: () => ({ left: 0, top: 0 }),
-  });
+  const makeEl = (id) => {
+    const el = {
+      id,
+      width: 0, height: 0,
+      dataset: { char: id },
+      children: [],
+      classes: new Set(),
+      classList: {
+        add(c) { el.classes.add(c); dom.classesUsed.add(c); },
+        remove(c) { el.classes.delete(c); dom.classesUsed.add(c); },
+        toggle(c, force) {
+          const on = force ?? !el.classes.has(c);
+          if (on) el.classes.add(c); else el.classes.delete(c);
+          dom.classesUsed.add(c);
+          return on;
+        },
+        contains: (c) => el.classes.has(c),
+      },
+      addEventListener(ev, fn) { (listeners[id] ||= {})[ev] = fn; },
+      append(...nodes) { el.children.push(...nodes); },
+      replaceChildren(...nodes) { el.children = [...nodes]; },
+      get textContent() { return el._text ?? ''; },
+      set textContent(text) { el._text = text; el.children = []; }, // like the DOM: setting text drops the children
+      value: '',
+      tagName: id === 'spell-input' ? 'INPUT' : 'DIV',
+      focus() { dom.activeElement = el; },
+      blur() { if (dom.activeElement === el) dom.activeElement = null; },
+      getContext: () => ctx,
+      getBoundingClientRect: () => ({ left: 0, top: 0 }),
+    };
+    return el;
+  };
   const els = {};
   const getEl = (id) => (els[id] ||= makeEl(id));
   const cards = ['knight', 'assassin', 'archer'].map((c) => makeEl(`card-${c}`));
   cards.forEach((c, i) => { c.dataset.char = ['knight', 'assassin', 'archer'][i]; });
 
   let raf = null;
+  const timers = [];
   const sandbox = {
-    document: { getElementById: getEl, createElement: (tag) => makeEl(tag), querySelectorAll: () => cards },
+    document: {
+      getElementById: getEl, createElement: (tag) => makeEl(tag), querySelectorAll: () => cards,
+      get activeElement() { return dom.activeElement ?? null; },
+    },
     window: {
       innerWidth: 1000, innerHeight: 700,
       addEventListener(ev, fn) { // several handlers per event are all called, like in a browser
@@ -193,6 +223,8 @@ function createFakeDom() {
       },
     },
     performance: { now: () => 0 },
+    setTimeout: (fn) => timers.push(fn),
+    clearTimeout: (id) => { if (id) timers[id - 1] = null; },
     requestAnimationFrame: (fn) => { raf = fn; },
     Math, console,
   };
@@ -200,12 +232,31 @@ function createFakeDom() {
     sandbox, listeners, draws, cards, getEl,
     frame(now) { const f = raf; raf = null; f(now); },
     hasFrame: () => raf !== null,
+    // Runs the timeouts that are still pending (cleared ones are null).
+    runTimers() { for (const fn of timers.splice(0)) fn?.(); },
   });
 }
 
-function loadBundle(dom) {
+function loadBundle(dom, script = inlineScript()) {
   vm.createContext(dom.sandbox);
-  new vm.Script(inlineScript()).runInContext(dom.sandbox);
+  new vm.Script(script).runInContext(dom.sandbox);
+}
+
+// A build in which the lexicon already holds every spell (in the game, spells are unlocked by clearing waves).
+function fullLexiconScript() {
+  const dir = makeProjectCopy();
+  try {
+    const file = join(dir, 'src', 'lexicon.js');
+    const src = readFileSync(file, 'utf8');
+    const patched = src.replace('export const createLexicon = () => [];', 'export const createLexicon = () => [...SPELLS];');
+    assert.notEqual(patched, src, 'createLexicon pattern not found');
+    writeFileSync(file, patched);
+    const res = runBuild(dir);
+    assert.equal(res.status, 0, res.stderr);
+    return readFileSync(join(dir, 'dist', 'index.html'), 'utf8').match(/<script>([\s\S]*)<\/script>/)[1];
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 test('build: the bundled game starts and renders frames against a stubbed DOM', () => {
@@ -251,6 +302,78 @@ test('build: arrow keys and wheel scroll the lexicon only while focus mode is ac
   assert.equal(lexicon.scrollTop, 60, 'down, down, up = one step down');
   win.wheel({ deltaY: 100 });
   assert.equal(lexicon.scrollTop, 160);
+});
+
+test('build: focus mode opens the spell input and typing there does not steer the game', () => {
+  const dom = createFakeDom();
+  loadBundle(dom);
+  const field = dom.getEl('spell-input');
+  dom.listeners['btn-continue'].click();
+  const win = dom.listeners.window;
+  dom.frame(16);
+  assert.notEqual(dom.activeElement, field, 'field not focused without focus mode');
+  win.keydown({ code: 'ShiftLeft', preventDefault() {} });                // Shift: focus mode on
+  dom.frame(32);
+  assert.equal(dom.activeElement, field, 'field is focused in focus mode');
+  field.value = 'Not A Spell';
+  dom.listeners['spell-input'].input();
+  dom.frame(48);
+  assert.equal(field.value, 'NOT A SPELL', 'the field always shows uppercase');
+  assert.equal(dom.activeElement, field, 'a wrong word keeps focus mode open');
+  win.keyup({ code: 'ShiftLeft', target: field });
+  win.keydown({ code: 'ShiftLeft', preventDefault() {}, target: field }); // Shift while typing: focus mode off
+  dom.frame(64);
+  assert.notEqual(dom.activeElement, field, 'leaving focus mode blurs the field');
+  assert.equal(field.value, '', 'leaving focus mode mid-word clears the field');
+});
+
+// ---- green letters for the typed start of a spell name ----
+
+const isSpan = (node) => node.id === 'span';
+const greenParts = (nameEl) => nameEl.children.filter(isSpan).map((s) => s.textContent);
+// The name element of every lexicon block (the header is the first child of the lexicon).
+const lexiconNames = (dom) => dom.getEl('lexicon').children.slice(1).map((block) => block.children[0]);
+
+function typeInSpellInput(dom, text) {
+  const field = dom.getEl('spell-input');
+  field.value = text;
+  dom.listeners['spell-input'].input();
+  return field;
+}
+
+test('build: typed letters that start a lexicon spell turn green, the other names stay plain', () => {
+  const dom = createFakeDom();
+  loadBundle(dom, fullLexiconScript());
+  dom.listeners['btn-continue'].click();
+  typeInSpellInput(dom, 'ch');
+  const marked = lexiconNames(dom).filter((n) => greenParts(n).length > 0);
+  assert.equal(marked.length, 1, 'only "Chain Spark" starts with CH');
+  assert.deepEqual(greenParts(marked[0]), ['Ch'], 'the matched letters are green');
+  assert.equal(marked[0].children.length, 2, 'the rest of the name stays uncoloured');
+  assert.equal(marked[0].children[1], 'ain Spark');
+  assert.ok(lexiconNames(dom).filter((n) => n !== marked[0]).every((n) => n.children.length === 0), 'other names are plain');
+});
+
+test('build: a word that stops matching takes the green letters away again', () => {
+  const dom = createFakeDom();
+  loadBundle(dom, fullLexiconScript());
+  dom.listeners['btn-continue'].click();
+  typeInSpellInput(dom, 'ch');
+  typeInSpellInput(dom, 'chx');
+  assert.ok(lexiconNames(dom).every((n) => greenParts(n).length === 0), 'no name is green after the mismatch');
+  assert.ok(lexiconNames(dom).every((n) => n.children.length === 0), 'names are back to plain text');
+  assert.ok(lexiconNames(dom).some((n) => n.textContent === 'Chain Spark'), 'the spell name is intact');
+});
+
+test('build: the typing timeout clears the field and the green letters', () => {
+  const dom = createFakeDom();
+  loadBundle(dom, fullLexiconScript());
+  dom.listeners['btn-continue'].click();
+  const field = typeInSpellInput(dom, 'ch');
+  assert.ok(lexiconNames(dom).some((n) => greenParts(n).length > 0), 'precondition: letters are green');
+  dom.runTimers();
+  assert.equal(field.value, '', 'the field is cleared');
+  assert.ok(lexiconNames(dom).every((n) => greenParts(n).length === 0), 'the green letters are gone');
 });
 
 test('build: "</script" and "<!--" in the game data can not break out of the inline script', () => {

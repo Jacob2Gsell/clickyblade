@@ -18,3 +18,18 @@ export function unlockSpells(lexicon, pool = SPELLS, count = SPELLS_PER_WAVE, ra
   lexicon.push(...picked);
   return picked;
 }
+
+// Spell names are compared in uppercase and ignoring extra spaces, so "  ember   lash " matches "Ember Lash".
+const normalizeName = (text) => text.trim().replace(/\s+/g, ' ').toUpperCase();
+
+// How many leading letters of the spell's name the typed text matches (0 if it is not the start of the name).
+export function matchedPrefixLength(spell, text) {
+  const typed = normalizeName(text);
+  return typed !== '' && normalizeName(spell.name).startsWith(typed) ? typed.length : 0;
+}
+
+// The spell in the lexicon whose name equals `text`, or undefined. Only spells already in the lexicon can be cast.
+export function findKnownSpell(lexicon, text) {
+  const wanted = normalizeName(text);
+  return lexicon.find((s) => normalizeName(s.name) === wanted);
+}

@@ -1,3 +1,6 @@
+// Keys that keep working while a text field has focus.
+const SHARED_KEYS = new Set(['ShiftLeft', 'ShiftRight', 'Escape']);
+
 // Keyboard and mouse state. Call endFrame() once per update tick to clear one-shot presses.
 export function createInput(canvas) {
   const keys = new Set();
@@ -5,6 +8,10 @@ export function createInput(canvas) {
   const mouse = { x: 0, y: 0, down: false, rightDown: false, clicked: false, rightClicked: false };
 
   window.addEventListener('keydown', (e) => {
+    // Keys typed into a text field (the spell input) are not game input: no movement.
+    // Shift (focus mode toggle) and Escape (pause) still count while the field has focus.
+    const typing = e.target?.tagName === 'INPUT' && !SHARED_KEYS.has(e.code);
+    if (typing) return;
     const k = e.code;
     if (!keys.has(k)) pressed.add(k);
     keys.add(k);

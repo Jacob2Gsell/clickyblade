@@ -7,7 +7,7 @@ import {
   createWaves, advanceWaves, spawnPoint, isDasherSpawn,
   resolveContacts, removeDead, advanceTime, HITSTOP_HIT,
 } from './rules.js';
-import { createLexicon, unlockSpells } from './lexicon.js';
+import { createLexicon, unlockSpells, findKnownSpell, matchedPrefixLength } from './lexicon.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -26,6 +26,7 @@ for (const b of renderToggles) b.addEventListener('click', () => setAsciiMode(!a
 
 const overlay = document.getElementById('slowmo-overlay');
 const lexiconEl = document.getElementById('lexicon');
+const spellInput = document.getElementById('spell-input');
 const pauseMenu = document.getElementById('pause-menu');
 const mainMenu = document.getElementById('main-menu');
 const charCards = [...document.querySelectorAll('.char-card')];
@@ -51,11 +52,15 @@ for (const card of charCards) {
 
 const STEP = 1 / 120;
 const ARENA_MARGIN = 20;
-let bounds, player, enemies, score, waves, gameOver, lexicon;
+let bounds, player, enemies, score, waves, gameOver, lexicon, activeSpells;
 let slowmo, paused;
 const fx = { shake: 0, hitstop: 0, timeScale: 1 }; // screenshake, hitstop and time scale
 let inMenu = true;
 let focused = false; // focus mode is visibly active (slow motion, not paused, not in a menu)
+
+// Typed spell text is cleared after this long without a keystroke.
+const TYPING_TIMEOUT = 500; // ms, real time
+let typingTimer;
 
 // The lexicon ignores the mouse (so clicks still reach the game); while focused, the wheel and the
 // up/down arrow keys scroll it.
@@ -82,17 +87,40 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// Name elements by spell id, so the typed-letter highlight can update them without re-rendering the lexicon.
+const spellNameEls = new Map();
+
+// Marks the letters of each spell name that the typed text matches from the start (green).
+function highlightSpellMatches(typed) {
+  for (const spell of lexicon) {
+    const name = spellNameEls.get(spell.id);
+    if (!name) continue; // not rendered yet (renderLexicon highlights again once it is)
+    const n = matchedPrefixLength(spell, typed);
+    if (n === 0) {
+      name.textContent = spell.name;
+      continue;
+    }
+    const matched = document.createElement('span');
+    matched.classList.add('spell-match');
+    matched.textContent = spell.name.slice(0, n);
+    name.replaceChildren(matched, spell.name.slice(n));
+  }
+}
+
 // Newest spell on top: a header followed by one block per spell (name, then its effects).
 function renderLexicon() {
   const head = document.createElement('div');
   head.classList.add('lex-title');
   head.textContent = 'Lexicon';
+  spellNameEls.clear();
   const blocks = [...lexicon].reverse().map((spell) => {
     const block = document.createElement('div');
     block.classList.add('spell');
+    if (activeSpells.includes(spell.id)) block.classList.add('spell-active');
     const name = document.createElement('div');
     name.classList.add('spell-name');
     name.textContent = spell.name;
+    spellNameEls.set(spell.id, name);
     block.append(name);
     for (const effect of spell.effects) {
       const line = document.createElement('div');
@@ -104,10 +132,36 @@ function renderLexicon() {
   });
   lexiconEl.replaceChildren(head, ...blocks);
   lexiconEl.scrollTop = 0; // show the newest spell
+  highlightSpellMatches(spellInput.value);
 }
+
+function clearSpellInput() {
+  clearTimeout(typingTimer);
+  spellInput.value = '';
+  highlightSpellMatches('');
+}
+
+// Casting marks the spell as active (its effect is not implemented yet), closes focus mode and clears the field.
+function castSpell(spell) {
+  clearSpellInput();
+  if (!activeSpells.includes(spell.id)) activeSpells.push(spell.id);
+  slowmo = false;
+  renderLexicon();
+}
+
+spellInput.addEventListener('input', () => {
+  spellInput.value = spellInput.value.toUpperCase(); // every input is uppercase, spell names are compared in uppercase too
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(clearSpellInput, TYPING_TIMEOUT); // also removes the green letters
+  const spell = findKnownSpell(lexicon, spellInput.value);
+  if (spell) castSpell(spell);
+  else highlightSpellMatches(spellInput.value);
+});
 
 function reset() {
   lexicon = createLexicon();
+  activeSpells = [];
+  clearSpellInput();
   renderLexicon();
   player = createPlayer(canvas.width / 2, canvas.height / 2, character);
   enemies = [];
@@ -257,6 +311,10 @@ function frame(now) {
   focused = slowmo && !paused && !inMenu;
   overlay.classList.toggle('active', focused);
   lexiconEl.classList.toggle('active', focused);
+  spellInput.classList.toggle('active', focused);
+  if (focused && document.activeElement !== spellInput) spellInput.focus();
+  if (!focused && document.activeElement === spellInput) spellInput.blur();
+  if (!focused && spellInput.value !== '') clearSpellInput(); // leaving focus mode mid-word discards the typed text
   render();
   requestAnimationFrame(frame);
 }
