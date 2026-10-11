@@ -43,6 +43,19 @@ let bounds, player, enemies, score, waves, gameOver, lexicon;
 let slowmo, paused;
 const fx = { shake: 0, hitstop: 0, timeScale: 1 }; // screenshake, hitstop and time scale
 let inMenu = true;
+let focused = false; // focus mode is visibly active (slow motion, not paused, not in a menu)
+
+// The lexicon ignores the mouse (so clicks still reach the game); while focused, the wheel and the
+// up/down arrow keys scroll it.
+const ARROW_SCROLL = 60; // px per key press (also per key repeat)
+window.addEventListener('wheel', (e) => {
+  if (focused) lexiconEl.scrollTop += e.deltaY;
+}, { passive: true });
+window.addEventListener('keydown', (e) => {
+  if (!focused || (e.code !== 'ArrowUp' && e.code !== 'ArrowDown')) return;
+  e.preventDefault();
+  lexiconEl.scrollTop += e.code === 'ArrowDown' ? ARROW_SCROLL : -ARROW_SCROLL;
+});
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -76,6 +89,7 @@ function renderLexicon() {
     return block;
   });
   lexiconEl.replaceChildren(head, ...blocks);
+  lexiconEl.scrollTop = 0; // show the newest spell
 }
 
 function reset() {
@@ -223,7 +237,7 @@ function frame(now) {
     acc -= STEP;
   }
   pauseMenu.classList.toggle('open', paused);
-  const focused = slowmo && !paused && !inMenu;
+  focused = slowmo && !paused && !inMenu;
   overlay.classList.toggle('active', focused);
   lexiconEl.classList.toggle('active', focused);
   render();

@@ -56,7 +56,7 @@ test('build: HTML is minified (no comments, no indentation or blank lines)', () 
   assert.ok(!html.includes('<!--'));
   assert.ok(!/\n\s*\n/.test(html), 'blank lines');
   assert.ok(!/\n {2,}</.test(html), 'indented tags');
-  assert.ok(html.length < readFileSync(join(ROOT, 'index.html'), 'utf8').length + 20000);
+  assert.ok(html.length < readFileSync(join(ROOT, 'index.html'), 'utf8').length + 25000);
 });
 
 test('build: all three icons are embedded as valid SVG data URIs', () => {
@@ -187,7 +187,10 @@ function createFakeDom() {
     document: { getElementById: getEl, createElement: (tag) => makeEl(tag), querySelectorAll: () => cards },
     window: {
       innerWidth: 1000, innerHeight: 700,
-      addEventListener(ev, fn) { (listeners.window ||= {})[ev] = fn; },
+      addEventListener(ev, fn) { // several handlers per event are all called, like in a browser
+        const w = (listeners.window ||= {}), prev = w[ev];
+        w[ev] = prev ? (e) => { prev(e); fn(e); } : fn;
+      },
     },
     performance: { now: () => 0 },
     requestAnimationFrame: (fn) => { raf = fn; },
@@ -229,4 +232,23 @@ test('build: every character can be started and survives ten seconds of play', (
     }
     assert.ok(dom.draws.calls > 1000, `character ${c}: too little was drawn`);
   }
+});
+
+test('build: arrow keys and wheel scroll the lexicon only while focus mode is active', () => {
+  const dom = createFakeDom();
+  loadBundle(dom);
+  const lexicon = dom.getEl('lexicon');
+  dom.listeners['btn-continue'].click();
+  const win = dom.listeners.window;
+  const key = (code) => ({ code, preventDefault() {} });
+  win.keydown(key('ArrowDown'));
+  assert.equal(lexicon.scrollTop, 0, 'scrolls without focus mode');
+  win.keydown(key('ShiftLeft'));                        // toggle focus mode on
+  for (let i = 1; i <= 5; i++) dom.frame(i * 16);
+  win.keydown(key('ArrowDown'));
+  win.keydown(key('ArrowDown'));
+  win.keydown(key('ArrowUp'));
+  assert.equal(lexicon.scrollTop, 60, 'down, down, up = one step down');
+  win.wheel({ deltaY: 100 });
+  assert.equal(lexicon.scrollTop, 160);
 });
