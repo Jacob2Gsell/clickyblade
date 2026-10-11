@@ -44,6 +44,12 @@ test('build: produces dist/index.html', () => {
   assert.ok(existsSync(join(work, 'dist', 'index.html')));
 });
 
+test('build: the spell input is limited to 40 characters', () => {
+  const tag = html.match(/<input[^>]*id="spell-input"[^>]*>/)?.[0];
+  assert.ok(tag, 'spell input not found in the output');
+  assert.match(tag, /maxlength="40"/);
+});
+
 test('build: output is a single self-contained file', () => {
   assert.ok(!html.includes('type="module"'), 'module script tag left over');
   assert.ok(!html.includes('src/main.js'), 'reference to the source entry left over');
