@@ -8,6 +8,7 @@ import {
   resolveContacts, removeDead, advanceTime, HITSTOP_HIT,
 } from './rules.js';
 import { createLexicon, unlockSpells, findKnownSpell, matchedPrefixLength } from './lexicon.js';
+import { spawnDamageNumber, updateDamageNumbers, drawDamageNumbers } from './damage-numbers.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -53,6 +54,7 @@ for (const card of charCards) {
 const STEP = 1 / 120;
 const ARENA_MARGIN = 20;
 let bounds, player, enemies, score, waves, gameOver, lexicon, activeSpells;
+let damageNumbers = []; // floating "-health" numbers over enemies that were hit
 let slowmo, paused;
 const fx = { shake: 0, hitstop: 0, timeScale: 1 }; // screenshake, hitstop and time scale
 let inMenu = true;
@@ -153,6 +155,7 @@ function reset() {
   renderLexicon();
   player = createPlayer(canvas.width / 2, canvas.height / 2, character);
   enemies = [];
+  damageNumbers = [];
   score = 0;
   waves = createWaves();
   fx.shake = 0;
@@ -186,10 +189,12 @@ function update(dt) {
 
   updatePlayer(player, input, dt, bounds, enemies, (e, kx, ky, dmg) => {
     hitEnemy(e, kx, ky, dmg);
+    spawnDamageNumber(damageNumbers, e, dmg);
     fx.shake = Math.max(fx.shake, 6);
     fx.hitstop = Math.max(fx.hitstop, HITSTOP_HIT);
   }, { w: canvas.width, h: canvas.height });
   updateEnemies(enemies, player, dt, bounds);
+  updateDamageNumbers(damageNumbers, dt);
 
   if (resolveContacts(player, enemies, fx)) gameOver = true;
 
@@ -263,6 +268,7 @@ function render() {
   drawFloor(g, asciiMode);
   for (const e of enemies) drawEnemy(g, e);
   drawPlayer(g, player);
+  drawDamageNumbers(g, damageNumbers);
   g.restore();
   if (asciiMode) drawAscii(sceneCanvas, ctx);
 
