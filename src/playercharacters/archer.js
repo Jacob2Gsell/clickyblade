@@ -206,7 +206,7 @@ function drawArcherBack(ctx, p) {
   for (const a of p.afterimages) {
     const k = 1 - a.t / AFTERIMAGE_TIME; // 0 when it appears, 1 when it is gone
     ctx.globalAlpha = 0.6 * (1 - k);
-    ctx.fillStyle = '#4af';
+    ctx.fillStyle = '#00ff00';
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius * (1 + AFTERIMAGE_GROWTH * k), 0, Math.PI * 2);
     ctx.fill();
