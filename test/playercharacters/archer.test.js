@@ -56,7 +56,7 @@ test('archer: charge level 3 shoots six arrows over a 60 degree fan', () => {
 
 test('archer: releasing right after reaching a level does 1.5x damage for the whole volley', () => {
   const p = createPlayer(500, 500, 'archer');
-  shoot(p, 0.7); // level 2 was reached at 0.656 s; its perfect window runs until 0.806 s
+  shoot(p, 0.8); // level 2 was reached at 0.731 s; its perfect window runs until 0.956 s
   assert.equal(p.arrows.length, 3);
   assert.ok(p.arrows.every((a) => a.dmg === 1.5));
 });
@@ -65,6 +65,20 @@ test('archer: releasing late in a level does normal damage', () => {
   const p = createPlayer(500, 500, 'archer');
   shoot(p, 1.1); // after level 2's perfect window has closed and before level 3
   assert.ok(p.arrows.every((a) => a.dmg === 1));
+});
+
+test('archer: releasing 0.2 s after level 1 is still perfect', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.42); // level 1 was reached at 0.225 s; its window runs until 0.45 s
+  assert.equal(p.arrows.length, 1);
+  assert.equal(p.arrows[0].dmg, 1.5);
+});
+
+test('archer: releasing after the 0.225 s perfect window does normal damage', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.5); // level 1 window closed at 0.45 s; level 2 is not reached yet
+  assert.equal(p.arrows.length, 1);
+  assert.equal(p.arrows[0].dmg, 1);
 });
 
 test('archer: arrows are removed once they leave the viewport', () => {
@@ -151,7 +165,7 @@ test('archer: a perfect shot leaves an afterimage that follows the archer and th
   const p = createPlayer(500, 500, 'archer');
   shoot(p, 0.6); // not perfect
   assert.equal(p.afterimages.length, 0);
-  shoot(p, 0.35); // perfect: level 1 was reached at 0.225 s, its window runs until 0.375 s
+  shoot(p, 0.35); // perfect: level 1 was reached at 0.225 s, its window runs until 0.45 s
   assert.equal(p.afterimages.length, 1);
   p.x = 700; // the archer moves on; the afterimage is drawn at the archer's position, so it moves with him
   updatePlayer(p, input(), 0.2, BOUNDS, [], noHit, VIEW);
@@ -160,14 +174,24 @@ test('archer: a perfect shot leaves an afterimage that follows the archer and th
   assert.equal(p.afterimages.length, 0);
 });
 
-test('archer: perfect window opens when a level is reached and closes after 0.15 s', () => {
+test('archer: perfect window opens when a level is reached and closes after 0.225 s', () => {
   const p = createPlayer(500, 500, 'archer');
   const hold = (dt) => updatePlayer(p, input({ down: ['KeyJ'], pressed: p.charge === null ? ['KeyJ'] : [] }), dt, BOUNDS, [], noHit, VIEW);
   assert.equal(perfectWindowOpen(p), false);
   hold(0.225); // level 1 reached
   assert.equal(perfectWindowOpen(p), true);
-  hold(0.15);
+  hold(0.2); // 0.025 s of the window left
+  assert.equal(perfectWindowOpen(p), true);
+  hold(0.025);
   assert.equal(perfectWindowOpen(p), false);
+});
+
+test('archer: the perfect window is 50% longer than the old 0.15 s', () => {
+  const p = createPlayer(500, 500, 'archer');
+  const hold = (dt) => updatePlayer(p, input({ down: ['KeyJ'], pressed: p.charge === null ? ['KeyJ'] : [] }), dt, BOUNDS, [], noHit, VIEW);
+  hold(0.225); // level 1 reached
+  hold(0.2); // 0.2 s into the window: still open, the old 0.15 s window would be closed
+  assert.equal(perfectWindowOpen(p), true);
 });
 
 test('archer: the charge bar freezes while the perfect window is open', () => {
@@ -177,8 +201,8 @@ test('archer: the charge bar freezes while the perfect window is open', () => {
   assert.ok(Math.abs(p.charge - 0.225) < 1e-9);
   hold(0.1); // still inside the window: no movement
   assert.ok(Math.abs(p.charge - 0.225) < 1e-9);
-  hold(0.1); // window ends 0.05 s into this frame, the rest of the frame charges
-  assert.ok(Math.abs(p.charge - 0.275) < 1e-9);
+  hold(0.2); // window ends 0.125 s into this frame, the remaining 0.075 s charge
+  assert.ok(Math.abs(p.charge - 0.3) < 1e-9);
 });
 
 test('archer: holding the secondary key places only one trap', () => {
