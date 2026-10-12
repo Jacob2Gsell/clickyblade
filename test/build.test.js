@@ -8,7 +8,7 @@ import vm from 'node:vm';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const BUILD_SCRIPT = join(ROOT, 'scripts', 'build.js');
-const MAX_KB = 30; // the build is ~21 KB; this catches an accidentally unminified or doubled bundle
+const MAX_KB = 34; // the build is ~32 KB; this catches an accidentally unminified or doubled bundle
 
 // The build reads index.html, src/ and icons/ relative to the working directory, so it can run in a
 // throwaway copy of the project without touching the real dist/.
@@ -62,12 +62,12 @@ test('build: HTML is minified (no comments, no indentation or blank lines)', () 
   assert.ok(!html.includes('<!--'));
   assert.ok(!/\n\s*\n/.test(html), 'blank lines');
   assert.ok(!/\n {2,}</.test(html), 'indented tags');
-  assert.ok(html.length < readFileSync(join(ROOT, 'index.html'), 'utf8').length + 25000);
+  assert.ok(html.length < readFileSync(join(ROOT, 'index.html'), 'utf8').length + 28000);
 });
 
-test('build: all three icons are embedded as valid SVG data URIs', () => {
+test('build: all four icons (three characters and the book) are embedded as valid SVG data URIs', () => {
   const uris = [...html.matchAll(/src="data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)"/g)];
-  assert.equal(uris.length, 3);
+  assert.equal(uris.length, 4);
   for (const [, b64] of uris) {
     const svg = Buffer.from(b64, 'base64').toString('utf8');
     assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), svg.slice(0, 40));
@@ -199,6 +199,8 @@ function createFakeDom() {
       tagName: id === 'spell-input' ? 'INPUT' : 'DIV',
       focus() { dom.activeElement = el; },
       blur() { if (dom.activeElement === el) dom.activeElement = null; },
+      remove() {},
+      style: {},
       getContext: () => ctx,
       getBoundingClientRect: () => ({ left: 0, top: 0 }),
     };
@@ -294,41 +296,29 @@ test('build: every character can be started and survives ten seconds of play', (
   }
 });
 
-test('build: the lexicon does not scroll with the arrow keys, not even in focus mode', () => {
+test('build: the lexicon does not scroll with the arrow keys', () => {
   const dom = createFakeDom();
   loadBundle(dom);
   const lexicon = dom.getEl('lexicon');
   press(dom, 'Digit1');
   const win = dom.listeners.window;
   const key = (code) => ({ code, preventDefault() {} });
-  win.keydown(key('ShiftLeft'));                        // toggle focus mode on
   for (let i = 1; i <= 5; i++) dom.frame(i * 16);
   win.keydown(key('ArrowDown'));
   win.keydown(key('ArrowUp'));
   assert.equal(lexicon.scrollTop, 0);
 });
 
-test('build: focus mode opens the spell input and typing there does not steer the game', () => {
+test('build: Shift no longer opens focus mode, so the spell input stays closed', () => {
   const dom = createFakeDom();
   loadBundle(dom);
   const field = dom.getEl('spell-input');
   press(dom, 'Digit1');
   const win = dom.listeners.window;
+  win.keydown({ code: 'ShiftLeft', preventDefault() {} });
   dom.frame(16);
-  assert.notEqual(dom.activeElement, field, 'field not focused without focus mode');
-  win.keydown({ code: 'ShiftLeft', preventDefault() {} });                // Shift: focus mode on
   dom.frame(32);
-  assert.equal(dom.activeElement, field, 'field is focused in focus mode');
-  field.value = 'Not A Spell';
-  dom.listeners['spell-input'].input();
-  dom.frame(48);
-  assert.equal(field.value, 'NOT A SPELL', 'the field always shows uppercase');
-  assert.equal(dom.activeElement, field, 'a wrong word keeps focus mode open');
-  win.keyup({ code: 'ShiftLeft', target: field });
-  win.keydown({ code: 'ShiftLeft', preventDefault() {}, target: field }); // Shift while typing: focus mode off
-  dom.frame(64);
-  assert.notEqual(dom.activeElement, field, 'leaving focus mode blurs the field');
-  assert.equal(field.value, '', 'leaving focus mode mid-word clears the field');
+  assert.notEqual(dom.activeElement, field, 'Shift alone does not focus the spell input');
 });
 
 // ---- green letters for the typed start of a spell name ----

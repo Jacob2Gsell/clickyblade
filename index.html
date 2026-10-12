@@ -16,11 +16,32 @@
       opacity: 0; transition: opacity 0.25s;
     }
     #slowmo-overlay.active { opacity: 1; }
-    .focus-label {
+    .focus-wrap {
       position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+    }
+    .focus-label {
+      display: block;
       font: 600 20px system-ui, sans-serif; letter-spacing: 0.35em; text-indent: 0.35em;
       color: #e8f4ff; text-shadow: 0 0 12px rgba(102, 204, 255, 0.6);
     }
+    /* Thin line under the word, as wide as the word; scaleX from the centre shrinks it evenly from both sides. */
+    .focus-bar {
+      position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px;
+      height: 1px; background: #fff; transform-origin: center;
+    }
+    .flash-bonus { animation: bonus-flash 0.6s ease-out; }
+    .flash-penalty { animation: penalty-flash 0.6s ease-out; }
+    @keyframes bonus-flash { from { background: #6f6; } to { background: #fff; } }
+    @keyframes penalty-flash { from { background: #f55; } to { background: #fff; } }
+    .focus-delta {
+      position: absolute; left: 100%; top: 50%; margin-left: 12px; transform: translateY(-50%);
+      white-space: nowrap; font: 600 16px system-ui, sans-serif; color: #fff;
+      animation: delta-fade 1.2s ease-out forwards;
+    }
+    .focus-delta.delta-bonus { color: #6f6; }
+    .focus-delta.delta-penalty { color: #f55; }
+    @keyframes delta-fade { from { opacity: 1; } to { opacity: 0; } }
+    #book-icon { display: none; }
     #lexicon {
       position: fixed; left: 24px; top: 80px; bottom: 24px; width: 220px; z-index: 5;
       display: flex; flex-direction: column; gap: 8px; overflow: hidden;
@@ -91,7 +112,13 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <div id="slowmo-overlay"><span class="focus-label">FOKUS</span></div>
+  <div id="slowmo-overlay">
+    <div class="focus-wrap" id="focus-hud">
+      <span class="focus-label">FOKUS</span>
+      <div class="focus-bar" id="focus-line"></div>
+    </div>
+  </div>
+  <img id="book-icon" src="icons/book.svg" alt="">
   <div id="lexicon"></div>
   <input id="spell-input" type="text" placeholder="Zauberspruch" autocomplete="off" spellcheck="false" maxlength="40">
   <div id="pause-menu">

@@ -9,6 +9,8 @@ import {
 } from './rules.js';
 import { createLexicon, unlockSpells, findKnownSpell, matchedPrefixLength } from './lexicon.js';
 import { spawnDamageNumber, updateDamageNumbers, drawDamageNumbers } from './damage-numbers.js';
+import { createFocus, startFocus, endFocus, tickFocus, addBonus, applyPenalty, focusRatio } from './focus.js';
+import { createDamageTracker, trackDamage, spawnBook, updateBook, touchesBook, drawBook } from './book-powerup.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -27,6 +29,9 @@ function setAsciiMode(on) {
 const overlay = document.getElementById('slowmo-overlay');
 const lexiconEl = document.getElementById('lexicon');
 const spellInput = document.getElementById('spell-input');
+const focusWrap = document.getElementById('focus-hud');
+const focusBar = document.getElementById('focus-line');
+const bookIcon = document.getElementById('book-icon');
 const pauseMenu = document.getElementById('pause-menu');
 const mainMenu = document.getElementById('main-menu');
 let character = 'knight';
@@ -64,6 +69,9 @@ let slowmo, paused;
 const fx = { shake: 0, hitstop: 0, timeScale: 1 }; // screenshake, hitstop and time scale
 let inMenu = true;
 let focused = false; // focus mode is visibly active (slow motion, not paused, not in a menu)
+let focus = createFocus(); // focus mode timer, see focus.js
+let book = null; // the book power-up on the field, or null
+let damageTracker = createDamageTracker(); // damage dealt towards the next book, see book-powerup.js
 
 // Typed spell text is cleared after this long without a keystroke.
 const TYPING_TIMEOUT = 500; // ms, real time
@@ -136,22 +144,59 @@ function clearSpellInput() {
   highlightSpellMatches('');
 }
 
-// Casting marks the spell as active (its effect is not implemented yet), closes focus mode and clears the field.
+// Shows "+1s" / "−0.5s" next to the focus label and flashes the bar: green for a bonus, red for a penalty.
+// The bar is always white again at the end of the flash (see the CSS animations).
+function showFocusChange(seconds) {
+  if (Math.abs(seconds) < 0.005) return;
+  const delta = document.createElement('div');
+  delta.classList.add('focus-delta');
+  if (seconds > 0) delta.classList.add('delta-bonus');
+  if (seconds < 0) delta.classList.add('delta-penalty');
+  delta.textContent = `${seconds > 0 ? '+' : '−'}${Math.abs(seconds)}s`;
+  focusWrap.append(delta);
+  setTimeout(() => delta.remove(), 1200);
+  focusBar.classList.remove('flash-bonus');
+  focusBar.classList.remove('flash-penalty');
+  void focusBar.offsetWidth; // restarts the flash when it is triggered again
+  if (seconds > 0) focusBar.classList.add('flash-bonus');
+  if (seconds < 0) focusBar.classList.add('flash-penalty');
+}
+
+// Casting a spell keeps focus mode open and adds bonus time. The spell becomes active (its effect is not implemented yet).
 function castSpell(spell) {
   clearSpellInput();
   if (!activeSpells.includes(spell.id)) activeSpells.push(spell.id);
-  slowmo = false;
+  showFocusChange(addBonus(focus));
   renderLexicon();
+}
+
+// The typing timer ran out: a started word that is not a spell costs time. An empty field costs nothing.
+function expireWord() {
+  if (spellInput.value !== '') showFocusChange(-applyPenalty(focus));
+  clearSpellInput();
 }
 
 spellInput.addEventListener('input', () => {
   spellInput.value = spellInput.value.toUpperCase(); // every input is uppercase, spell names are compared in uppercase too
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(clearSpellInput, TYPING_TIMEOUT); // also removes the green letters
+  typingTimer = setTimeout(expireWord, TYPING_TIMEOUT); // also removes the green letters
   const spell = findKnownSpell(lexicon, spellInput.value);
   if (spell) castSpell(spell);
   else highlightSpellMatches(spellInput.value);
 });
+
+// Touching the book opens focus mode for FOCUS_DURATION seconds. If it is already open, nothing changes.
+function openFocus() {
+  if (slowmo) return;
+  slowmo = true;
+  startFocus(focus);
+}
+
+// Shift, or the time running out, closes focus mode. The bonus sequence starts again next time.
+function closeFocus() {
+  slowmo = false;
+  endFocus(focus);
+}
 
 function reset() {
   lexicon = createLexicon();
@@ -161,6 +206,9 @@ function reset() {
   player = createPlayer(canvas.width / 2, canvas.height / 2, character);
   enemies = [];
   damageNumbers = [];
+  book = null;
+  damageTracker = createDamageTracker();
+  focus = createFocus();
   score = 0;
   waves = createWaves();
   fx.shake = 0;
@@ -178,7 +226,7 @@ function spawnEnemy() {
 }
 
 function update(dt) {
-  if (input.wasPressed('ShiftLeft') || input.wasPressed('ShiftRight')) slowmo = !slowmo;
+  if (slowmo && (input.wasPressed('ShiftLeft') || input.wasPressed('ShiftRight'))) closeFocus();
 
   if (gameOver) {
     if (input.wasPressed('Enter')) reset();
@@ -197,9 +245,19 @@ function update(dt) {
     spawnDamageNumber(damageNumbers, e, dmg);
     fx.shake = Math.max(fx.shake, 6);
     fx.hitstop = Math.max(fx.hitstop, HITSTOP_HIT);
+    // Every hit counts at its full damage. A new book replaces an old one that is still lying around.
+    if (trackDamage(damageTracker, dmg) > 0) book = spawnBook(bounds, player);
   }, { w: canvas.width, h: canvas.height });
   updateEnemies(enemies, player, dt, bounds);
   updateDamageNumbers(damageNumbers, dt);
+
+  if (book) {
+    if (!updateBook(book, dt)) book = null;
+    else if (touchesBook(book, player)) {
+      book = null;
+      openFocus();
+    }
+  }
 
   if (resolveContacts(player, enemies, fx, bounds)) gameOver = true;
 
@@ -272,6 +330,7 @@ function render() {
   if (fx.shake > 0 && !paused) g.translate((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake);
   drawFloor(g, asciiMode);
   for (const e of enemies) drawEnemy(g, e);
+  if (book) drawBook(g, book, bookIcon);
   drawPlayer(g, player);
   drawDamageNumbers(g, damageNumbers);
   g.restore();
@@ -302,6 +361,8 @@ function frame(now) {
     pressMenuKeys();
     if (input.wasPressed('KeyR')) setAsciiMode(!asciiMode);
     if (!paused && !inMenu) {
+      // The focus timer runs in real time, so it ignores the slow motion of the game.
+      if (slowmo && tickFocus(focus, STEP)) closeFocus();
       update(advanceTime(fx, slowmo, STEP));
     }
     input.endFrame();
@@ -312,6 +373,7 @@ function frame(now) {
   overlay.classList.toggle('active', focused);
   lexiconEl.classList.toggle('active', focused);
   spellInput.classList.toggle('active', focused);
+  focusBar.style.transform = `scaleX(${focusRatio(focus)})`;
   if (focused && document.activeElement !== spellInput) spellInput.focus();
   if (!focused && document.activeElement === spellInput) spellInput.blur();
   if (!focused && spellInput.value !== '') clearSpellInput(); // leaving focus mode mid-word discards the typed text

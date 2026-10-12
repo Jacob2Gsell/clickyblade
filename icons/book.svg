@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- open book: two pages around a blue spine -->
+  <path d="M50 30Q34 22 14 26V76Q34 72 50 80ZM50 30Q66 22 86 26V76Q66 72 50 80Z" fill="#f4f0e4" stroke="#2a6fd6" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M50 30V80" stroke="#2a6fd6" stroke-width="4"/>
+</svg>
