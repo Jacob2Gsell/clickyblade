@@ -5,7 +5,7 @@ import { ATTACK_KEY, SECONDARY_KEY } from '../shared.js';
 
 const BASE_DAMAGE = 1;                // one plain shot; the knight's and assassin's hits also do 1
 const PERFECT_MULT = 1.5;             // damage multiplier for a release while the perfect window is open
-const PERFECT_WINDOW = 0.15;          // seconds the charge freezes after reaching a level; releasing in it is perfect
+const PERFECT_WINDOW = 0.1875;        // seconds the charge freezes after reaching a level; releasing in it is perfect
 const CHARGE_TIMES = [0.225, 0.50625, 0.84375]; // charge bar positions (seconds) of levels 1, 2 and 3
 const CHARGE_SPEED = 0.75;            // movement speed factor while the bow is charged
 // Charge bar colour by level reached: below level 1, then level 1, 2 and 3.
