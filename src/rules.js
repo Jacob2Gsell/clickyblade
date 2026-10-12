@@ -1,5 +1,6 @@
-import { isPlayerVulnerable, hurtPlayer, isShielded, useShield } from './player.js';
-import { shoveEnemy } from './enemies/enemy.js';
+import { isPlayerVulnerable, hurtPlayer } from './player.js';
+import { throwEnemy } from './enemies/enemy.js';
+import { aimRange, isShielded, useShield } from './player.js';
 
 // Game rules that don't touch the DOM or canvas, so they can be tested on their own.
 
@@ -10,7 +11,6 @@ export const HITSTOP_SCALE = 0.05;
 export const HITSTOP_HIT = 0.1;   // seconds, sword connects
 export const HITSTOP_HURT = 0.14; // seconds, player takes damage
 
-export const SHIELD_KNOCKBACK = 450; // how hard a blocked enemy is thrown back
 export const BLOCK_COOLDOWN = 0.5;   // seconds before the same enemy can hit the shield again
 
 export const FIRST_WAVE_PAUSE = 1;
@@ -62,8 +62,34 @@ export function advanceWaves(s, enemyCount, dt) {
   return false;
 }
 
+// How far an enemy can still move from (x, y) along (dx, dy) before it reaches the arena edge.
+// Without bounds there is no edge to respect.
+function roomToEdge(e, dx, dy, bounds) {
+  if (!bounds) return Infinity;
+  const room = (lo, hi, pos, d) => (d > 0 ? (hi - pos) / d : d < 0 ? (lo - pos) / d : Infinity);
+  return Math.max(0, Math.min(
+    room(bounds.x + e.radius, bounds.x + bounds.w - e.radius, e.x, dx),
+    room(bounds.y + e.radius, bounds.y + bounds.h - e.radius, e.y, dy),
+  ));
+}
+
+// A blocked hit throws back every living enemy within the aim range, each one directly away from the knight.
+// Enemies near the arena edge only fly as far as the edge allows.
+function throwBackAroundPlayer(player, enemies, bounds) {
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const dx = e.x - player.x, dy = e.y - player.y;
+    const dist = Math.hypot(dx, dy);
+    const range = aimRange(player);
+    if (!(dist <= range)) continue;
+    // An enemy exactly on the knight has no direction, so it goes the way the shield faces.
+    const nx = dist ? dx / dist : Math.cos(player.aim), ny = dist ? dy / dist : Math.sin(player.aim);
+    throwEnemy(e, nx, ny, Math.min(range, roomToEdge(e, nx, ny, bounds)));
+  }
+}
+
 // Enemy/player contact for one tick. fx is { shake, hitstop }; returns true if the player died.
-export function resolveContacts(player, enemies, fx) {
+export function resolveContacts(player, enemies, fx, bounds) {
   let gameOver = false;
   for (const e of enemies) {
     if (e.dead) continue;
@@ -71,10 +97,10 @@ export function resolveContacts(player, enemies, fx) {
     if (dist >= e.radius + player.radius) continue;
     const nx = (e.x - player.x) / (dist || 1), ny = (e.y - player.y) / (dist || 1);
     if (isShielded(player, nx, ny)) {
-      // The shield absorbs the hit and throws the enemy back; the same enemy can't use up charges every frame.
+      // The shield absorbs the hit and throws back everything around the knight; the same enemy can't use up charges every frame.
       if (!(e.blockCd > 0)) {
         useShield(player);
-        shoveEnemy(e, nx * SHIELD_KNOCKBACK, ny * SHIELD_KNOCKBACK);
+        throwBackAroundPlayer(player, enemies, bounds);
         e.blockCd = BLOCK_COOLDOWN;
         fx.shake = Math.max(fx.shake, 5);
         fx.hitstop = Math.max(fx.hitstop, HITSTOP_HIT);

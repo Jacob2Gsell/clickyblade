@@ -86,12 +86,12 @@ test('archer: an arrow hits an enemy once and is removed', () => {
   assert.equal(p.arrows.length, 0);
 });
 
-test('archer: traps are placed on right click and limited by charges and cooldown', () => {
+test('archer: traps are placed with the secondary key and limited by charges and cooldown', () => {
   const p = createPlayer(500, 500, 'archer');
   updatePlayer(p, input({ pressed: ['KeyK'] }), 0, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 1);
   assert.equal(p.trapCharges, 2);
-  // Still on cooldown: the second click is ignored
+  // Still on cooldown: the second press is ignored
   updatePlayer(p, input({ pressed: ['KeyK'] }), 0.1, BOUNDS, [], noHit, VIEW);
   assert.equal(p.traps.length, 1);
   updatePlayer(p, input({ pressed: ['KeyK'] }), 0.1, BOUNDS, [], noHit, VIEW);

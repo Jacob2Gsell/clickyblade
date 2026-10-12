@@ -104,7 +104,7 @@ test('knight: reach is 70 px plus the enemy radius', () => {
   assert.deepEqual(hits, [near]);
 });
 
-test('knight: a click during the swing is queued and starts the next swing right after', () => {
+test('knight: a press during the swing is queued and starts the next swing right after', () => {
   const p = knight();
   updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   const first = p.swing;
@@ -118,7 +118,7 @@ test('knight: a click during the swing is queued and starts the next swing right
   assert.equal(p.queued, null);
 });
 
-test('knight: holding the button does not swing again, only clicks do', () => {
+test('knight: holding the button does not swing again, only presses do', () => {
   const p = knight();
   updatePlayer(p, makeInput({ pressed: ['KeyJ'] }), 0.01, BOUNDS, [], noHit);
   updatePlayer(p, makeInput({ down: ['KeyJ'] }), 0.5, BOUNDS, [], noHit);
