@@ -190,28 +190,41 @@ function detonate(p, trap, enemies, onHit) {
 
 // Drawn behind the archer: glow, afterimages, traps on the floor, explosions and arrows in flight.
 function drawArcherBack(ctx, p) {
-  // Golden glow around the archer while a perfect window is open
+  // The whole drawing runs inside one save/restore, so no canvas setting leaks to the next drawer.
+  ctx.save();
+
+  // Golden glow around the archer while a perfect window is open, drawn with the same additive glow as the afterimage
   if (perfectWindowOpen(p)) {
     const glowRadius = p.radius * 2.2;
     const glow = ctx.createRadialGradient(p.x, p.y, p.radius, p.x, p.y, glowRadius);
     glow.addColorStop(0, 'rgba(255, 220, 110, 0.55)');
     glow.addColorStop(1, 'rgba(255, 220, 110, 0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = 'rgb(255, 220, 110)';
+    ctx.shadowBlur = 20;
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Afterimage of a perfect shot: it stays on the archer, grows and fades out
+  // Afterimage of a perfect shot: it stays on the archer, grows and fades out.
+  // Drawn additively with a green glow so it looks brighter than plain green.
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowColor = '#00ff00';
+  ctx.shadowBlur = 20;
   for (const a of p.afterimages) {
     const k = 1 - a.t / AFTERIMAGE_TIME; // 0 when it appears, 1 when it is gone
-    ctx.globalAlpha = 0.6 * (1 - k);
-    ctx.fillStyle = '#4af';
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = '#00ff00';
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius * (1 + AFTERIMAGE_GROWTH * k), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0)';
 
   for (const t of p.traps) {
     ctx.fillStyle = '#653';
@@ -241,12 +254,17 @@ function drawArcherBack(ctx, p) {
     ctx.lineTo(a.x, a.y);
     ctx.stroke();
   }
+
+  ctx.restore();
 }
 
 // Drawn in front of the archer: the bow and the charge bar.
 function drawArcherFront(ctx, p) {
+  // Like drawArcherBack: one save/restore, so the bow and bar leave no canvas settings behind.
+  ctx.save();
   drawBow(ctx, p);
   if (p.charge !== null) drawChargeBar(ctx, p);
+  ctx.restore();
 }
 
 // The bow is held in front of the archer; the string is pulled back while charging.
