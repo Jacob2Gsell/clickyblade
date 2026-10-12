@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlayer, updatePlayer } from '../../src/player.js';
-import { perfectWindowOpen } from '../../src/playercharacters/archer.js';
+import { archer, perfectWindowOpen } from '../../src/playercharacters/archer.js';
 
 const BOUNDS = { x: 0, y: 0, w: 1000, h: 1000 };
 const VIEW = { w: 1000, h: 1000 };
@@ -172,6 +172,169 @@ test('archer: a perfect shot leaves an afterimage that follows the archer and th
   assert.equal(p.afterimages.length, 1);
   updatePlayer(p, input(), 0.2, BOUNDS, [], noHit, VIEW);
   assert.equal(p.afterimages.length, 0);
+});
+
+// A canvas stand-in that records the drawing state at every fill() call, in drawing order.
+function recordingCtx() {
+  const fills = [];
+  const stack = [];
+  const ctx = {
+    fillStyle: null,
+    strokeStyle: null,
+    lineWidth: 1,
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    shadowColor: 'rgba(0, 0, 0, 0)',
+    shadowBlur: 0,
+    saves: 0,
+    restores: 0,
+    save() {
+      this.saves++;
+      stack.push({
+        fillStyle: this.fillStyle,
+        strokeStyle: this.strokeStyle,
+        lineWidth: this.lineWidth,
+        globalAlpha: this.globalAlpha,
+        globalCompositeOperation: this.globalCompositeOperation,
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+      });
+    },
+    restore() {
+      this.restores++;
+      const saved = stack.pop();
+      if (!saved) throw new Error('restore() without a matching save()');
+      Object.assign(this, saved);
+    },
+    beginPath() {},
+    fillRect() {},
+    arc() {},
+    moveTo() {},
+    lineTo() {},
+    stroke() {},
+    fill() {
+      fills.push({
+        fillStyle: this.fillStyle,
+        globalAlpha: this.globalAlpha,
+        globalCompositeOperation: this.globalCompositeOperation,
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+      });
+    },
+    createRadialGradient() { return { addColorStop() {} }; },
+  };
+  return { ctx, fills };
+}
+
+test('archer: the afterimage of a perfect shot is drawn pure green (rgb 0 255 0) with a glow', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.35); // perfect: level 1 was reached at 0.225 s
+  assert.equal(p.afterimages.length, 1);
+  const { ctx, fills } = recordingCtx();
+  archer.drawBack(ctx, p);
+  const afterimage = fills.find((f) => f.fillStyle === '#00ff00');
+  assert.ok(afterimage, `expected a green afterimage, drew ${JSON.stringify(fills)}`);
+  assert.equal(afterimage.globalCompositeOperation, 'lighter');
+  assert.equal(afterimage.shadowColor, '#00ff00');
+  assert.equal(afterimage.shadowBlur, 20);
+  assert.equal(afterimage.globalAlpha, 1, 'a fresh afterimage is fully opaque');
+});
+
+test('archer: the afterimage fades out from full opacity', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.35);
+  p.afterimages[0].t = 0.15; // half of AFTERIMAGE_TIME (0.3 s) has passed
+  const { ctx, fills } = recordingCtx();
+  archer.drawBack(ctx, p);
+  const afterimage = fills.find((f) => f.fillStyle === '#00ff00');
+  assert.ok(Math.abs(afterimage.globalAlpha - 0.5) < 1e-9);
+});
+
+test('archer: the golden perfect-window glow uses the same additive glow', () => {
+  const p = createPlayer(500, 500, 'archer');
+  p.charge = 0.3;
+  p.perfectLeft = 0.1; // perfect window is open, no afterimage
+  assert.equal(perfectWindowOpen(p), true);
+  const { ctx, fills } = recordingCtx();
+  archer.drawBack(ctx, p);
+  assert.equal(fills.length, 1);
+  assert.equal(fills[0].globalCompositeOperation, 'lighter');
+  assert.equal(fills[0].shadowColor, 'rgb(255, 220, 110)');
+  assert.equal(fills[0].shadowBlur, 20);
+});
+
+test('archer: glow settings are reset after drawing, so other effects are not affected', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.35); // afterimage drawn with glow
+  p.traps.push({ x: 100, y: 100, blast: 48 }); // trap is drawn afterwards without glow
+  const { ctx, fills } = recordingCtx();
+  archer.drawBack(ctx, p);
+  assert.equal(ctx.globalCompositeOperation, 'source-over');
+  assert.equal(ctx.shadowBlur, 0);
+  assert.equal(ctx.shadowColor, 'rgba(0, 0, 0, 0)');
+  const trap = fills.find((f) => f.fillStyle === '#653');
+  assert.equal(trap.globalCompositeOperation, 'source-over');
+  assert.equal(trap.shadowBlur, 0);
+});
+
+test('archer: drawing restores the canvas state the caller had, not the defaults', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.35); // afterimage drawn with glow
+  p.charge = 0.3;
+  p.perfectLeft = 0.1; // golden glow drawn too
+  const { ctx } = recordingCtx();
+  ctx.globalAlpha = 0.4;
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.shadowColor = 'rgb(1, 2, 3)';
+  ctx.shadowBlur = 7;
+  ctx.fillStyle = '#123456';
+  ctx.strokeStyle = '#654321';
+  ctx.lineWidth = 5;
+  archer.drawBack(ctx, p);
+  assert.equal(ctx.globalAlpha, 0.4);
+  assert.equal(ctx.globalCompositeOperation, 'multiply');
+  assert.equal(ctx.shadowColor, 'rgb(1, 2, 3)');
+  assert.equal(ctx.shadowBlur, 7);
+  assert.equal(ctx.fillStyle, '#123456');
+  assert.equal(ctx.strokeStyle, '#654321');
+  assert.equal(ctx.lineWidth, 5);
+});
+
+test('archer: drawing with arrows and traps does not leave stroke settings behind', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.6); // an arrow in flight is drawn with a stroke
+  p.traps.push({ x: 100, y: 100, blast: 48 }); // a trap is drawn with a stroke too
+  const { ctx } = recordingCtx();
+  archer.drawBack(ctx, p);
+  assert.equal(ctx.strokeStyle, null);
+  assert.equal(ctx.lineWidth, 1);
+});
+
+test('archer: drawing the bow and charge bar restores the canvas state and leaves no stroke settings behind', () => {
+  const p = createPlayer(500, 500, 'archer');
+  p.charge = 0.3; // bow pulled and charge bar shown
+  p.stage = 1;
+  const { ctx } = recordingCtx();
+  ctx.fillStyle = '#123456';
+  ctx.strokeStyle = '#654321';
+  ctx.lineWidth = 5;
+  archer.drawFront(ctx, p);
+  assert.equal(ctx.fillStyle, '#123456');
+  assert.equal(ctx.strokeStyle, '#654321');
+  assert.equal(ctx.lineWidth, 5);
+  assert.equal(ctx.saves, 1);
+  assert.equal(ctx.restores, 1);
+});
+
+test('archer: all drawing happens inside one save and its restore', () => {
+  const p = createPlayer(500, 500, 'archer');
+  shoot(p, 0.35);
+  p.charge = 0.3;
+  p.perfectLeft = 0.1;
+  const { ctx } = recordingCtx();
+  archer.drawBack(ctx, p);
+  assert.equal(ctx.saves, 1);
+  assert.equal(ctx.restores, 1);
 });
 
 test('archer: perfect window opens when a level is reached and closes after 0.1875 s', () => {
